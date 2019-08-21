@@ -681,12 +681,91 @@ select code, 'market_price_list10' as attr, list10 as val, date_index from s1.ma
 insert into s1.trends 
 select code, 'market_price_list05' as attr, list05 as val, date_index from s1.market_price ;
 
+drop table if exists s2.trends;
+create table s2.trends as 
+select code, 'market_price_list20' as attr, list20 as val, date_index from s2.market_price ;
+insert into s1.trends 
+select code, 'market_price_list10' as attr, list10 as val, date_index from s2.market_price ;
+insert into s1.trends 
+select code, 'market_price_list05' as attr, list05 as val, date_index from s2.market_price ;
+
+
+
 drop table if exists s1.eavt;
 create table s1.eavt (
 entity varchar,
 attrib varchar,
 valu   varchar,
 dindex varchar);
+
+drop table if exists s2.eavt;
+create table s2.eavt (
+entity varchar,
+attrib varchar,
+valu   varchar,
+dindex varchar);
+
+
+update s1.eavt set valu = replace(valu, ':-Infinity', ':"-Infinity"');
+update s1.eavt set valu = replace(valu, ':Infinity', ':"Infinity"');
+update s1.eavt set valu = replace(valu, ':NaN', ':"NaN"');
+
+drop table if exists s1.eavt_basic;
+create table s1.eavt_basic as select entity, dindex as date_index, attrib
+,case when valu::json->>'average'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'average'  end::numeric as average
+,case when valu::json->>'variance' in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'variance' end::numeric as variance
+,case when valu::json->>'minimum'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'minimum'  end::numeric as minimum
+,case when valu::json->>'pop_var'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'pop_var'  end::numeric as pop_var
+,case when valu::json->>'maximum'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'maximum'  end::numeric as maximum
+,case when valu::json->>'sum_log'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'sum_log'  end::numeric as sum_log
+,case when valu::json->>'sum_sqr'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'sum_sqr'  end::numeric as sum_sqr
+,case when valu::json->>'geo_avg'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'geo_avg'  end::numeric as geo_avg
+,case when valu::json->>'fst_qrt'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'fst_qrt'  end::numeric as fst_qrt
+,case when valu::json->>'lst_qrt'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'lst_qrt'  end::numeric as lst_qrt
+,case when valu::json->>'lst_pct'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'lst_pct'  end::numeric as lst_pct
+,case when valu::json->>'fst_pct'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'fst_pct'  end::numeric as fst_pct
+from s1.eavt where attrib like '%_basic';
+
+
+drop table if exists s1.eavt_curve;
+create table s1.eavt_curve as select entity, dindex as date_index, attrib
+,case when valu::json->>0 in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>0 end::numeric as zero
+,case when valu::json->>1 in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>1 end::numeric as first
+,case when valu::json->>2 in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>2 end::numeric as second
+from s1.eavt where attrib like '%_linear' or attrib like '%_quadratic';
+
+
+update s2.eavt set valu = replace(valu, ':-Infinity', ':"-Infinity"');
+update s2.eavt set valu = replace(valu, ':Infinity', ':"Infinity"');
+update s2.eavt set valu = replace(valu, ':NaN', ':"NaN"');
+
+drop table if exists s2.eavt_basic;
+create table s2.eavt_basic as select entity, dindex as date_index, attrib
+,case when valu::json->>'average'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'average'  end::numeric as average
+,case when valu::json->>'variance' in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'variance' end::numeric as variance
+,case when valu::json->>'minimum'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'minimum'  end::numeric as minimum
+,case when valu::json->>'pop_var'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'pop_var'  end::numeric as pop_var
+,case when valu::json->>'maximum'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'maximum'  end::numeric as maximum
+,case when valu::json->>'sum_log'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'sum_log'  end::numeric as sum_log
+,case when valu::json->>'sum_sqr'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'sum_sqr'  end::numeric as sum_sqr
+,case when valu::json->>'geo_avg'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'geo_avg'  end::numeric as geo_avg
+,case when valu::json->>'fst_qrt'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'fst_qrt'  end::numeric as fst_qrt
+,case when valu::json->>'lst_qrt'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'lst_qrt'  end::numeric as lst_qrt
+,case when valu::json->>'lst_pct'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'lst_pct'  end::numeric as lst_pct
+,case when valu::json->>'fst_pct'  in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>'fst_pct'  end::numeric as fst_pct
+from s2.eavt where attrib like '%_basic';
+
+
+drop table if exists s2.eavt_curve;
+create table s2.eavt_curve as select entity, dindex as date_index, attrib
+,case when valu::json->>0 in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>0 end::numeric as zero
+,case when valu::json->>1 in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>1 end::numeric as first
+,case when valu::json->>2 in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>2 end::numeric as second
+from s2.eavt where attrib like '%_linear' or attrib like '%_quadratic';
+
+
+
+
 
 
 select market_volume, * from s1.transactions limit 100;
