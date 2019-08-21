@@ -1,4 +1,4 @@
--- FUNCTION: public.cleanup()
+﻿-- FUNCTION: public.cleanup()
 
 -- DROP FUNCTION public.cleanup();
 
@@ -661,7 +661,8 @@ $BODY$;
 
 ALTER FUNCTION public.cleanup()
     OWNER TO postgres;
-
+create schema s1;
+create schema s2;
 
 select * from public.cleanup();
 
