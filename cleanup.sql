@@ -818,3 +818,6 @@ from s2.transactions ) t ) t  where date_index >=20;
 
 
 */
+
+
+
