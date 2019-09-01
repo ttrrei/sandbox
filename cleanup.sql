@@ -1,4 +1,4 @@
-﻿-- FUNCTION: public.cleanup()
+-- FUNCTION: public.cleanup()
 
 -- DROP FUNCTION public.cleanup();
 
@@ -162,25 +162,6 @@ create table s2.web_consensus_clean as
             web_consensus.sys_load_time::date AS load_date
            FROM s2.web_consensus) t;
 
-
-drop table if exists s1.short_clean;
-create table s1.short_clean as 
-select concat(product_code, '.AX') as code, 
-case when short_position = '' then null else cast(short_position as bigint) end as short_position,
-case when total_in_issue = '' then null else cast(total_in_issue as bigint) end as total_in_issue, 
-case when reported_position = '' then null else cast(reported_position as numeric) end as reported_position,
-cast(sys_load as date) as load_date
-from public.daily_short;
-
-drop table if exists s2.short_clean;
-create table s2.short_clean as 
-select concat(product_code, '.AX') as code, 
-case when short_position = '' then null else cast(short_position as bigint) end as short_position,
-case when total_in_issue = '' then null else cast(total_in_issue as bigint) end as total_in_issue, 
-case when reported_position = '' then null else cast(reported_position as numeric) end as reported_position,
-cast(sys_load as date) as load_date
-from public.daily_short;
-
 drop table if exists s1.short_clean;
 create table s1.short_clean as 
 select concat(trim(product_code), '.AX') as code, 
@@ -247,7 +228,6 @@ e.market_price as end_price
 from s2.transactions s inner join s2.transactions e
 on s.code = e.code and s.date_index = e.date_index -28;
 
-
 drop table if exists s1.increase_ratio;
 create table s1.increase_ratio as 
 select code, date_index, increase_ratio,
@@ -297,7 +277,6 @@ select code, date_index, case when  forward_pe is null then -999 else forward_pe
 row_number() over(partition by date_index order by case when forward_pe is null then -999 else forward_pe end desc) as rank
 from s2.transactions t
 order by 2 desc , 3 desc;
-
 
 drop table if exists s1.market_price;
 create table s1.market_price as
@@ -387,20 +366,6 @@ select code, date_index , json_build_array(
 , lag(market_price, 19) over( partition by code order by load_date) as mp19
 from s2.transactions ) t ) t  where date_index >=20;
 
-drop table if exists s1.volume_rank;
-create table s1.volume_rank as 
-select code, date_index, market_volume,
-row_number() over(partition by date_index order by market_volume desc) as rank
-from s1.transactions  t
-order by 2,3  desc ;
-
-drop table if exists s2.volume_rank;
-create table s2.volume_rank as 
-select code, date_index, market_volume,
-row_number() over(partition by date_index order by market_volume desc) as rank
-from s2.transactions  t
-order by 2,3  desc ;
-
 drop table if exists s1.temp_sub ;
 create table s1.temp_sub as 
 select code, date_index, average_volume,
@@ -451,7 +416,6 @@ inner join temp_sub t18 on t0.date_index = t18.date_index +18 and t0.code = t18.
 inner join temp_sub t19 on t0.date_index = t19.date_index +19 and t0.code = t19.code
 inner join temp_sub t20 on t0.date_index = t20.date_index +20 and t0.code = t20.code;
 
-
 drop table if exists temp_sub ;
 create temp table temp_sub as select * from s2.temp_sub;
 create index idx on temp_sub (code);
@@ -487,7 +451,6 @@ inner join temp_sub t17 on t0.date_index = t17.date_index +17 and t0.code = t17.
 inner join temp_sub t18 on t0.date_index = t18.date_index +18 and t0.code = t18.code
 inner join temp_sub t19 on t0.date_index = t19.date_index +19 and t0.code = t19.code
 inner join temp_sub t20 on t0.date_index = t20.date_index +20 and t0.code = t20.code;
-
 
 drop table if exists temp_rsv;
 create temp table temp_rsv as 
@@ -542,7 +505,6 @@ where 0.5*(2^10/3^10) + (2^9/3^10)*lag_10 + (2^8/3^9)*lag_9 +
 (2^4/3^5)*lag_5 + (2^3/3^4)*lag_4 + (2^2/3^3)*lag_3 + 
 (2^1/3^2)*lag_2 + (2^0/3^1)*lag_1 is not null;
 
-
 drop table if exists temp_rsv;
 create temp table temp_rsv as 
 select code, load_date, date_index, 
@@ -572,7 +534,6 @@ greatest(
 , lag(market_day_low, 10) over( partition by code order by load_date)
 ) as down from s2.transactions ) temp where date_index >10;
 
-
 drop table if exists s2.temp_kind;
 create table s2.temp_kind as 
 select code, load_date, date_index, 
@@ -597,7 +558,6 @@ where 0.5*(2^10/3^10) + (2^9/3^10)*lag_10 + (2^8/3^9)*lag_9 +
 (2^4/3^5)*lag_5 + (2^3/3^4)*lag_4 + (2^2/3^3)*lag_3 + 
 (2^1/3^2)*lag_2 + (2^0/3^1)*lag_1 is not null;
 
-
 drop table if exists s1.short_strength;
 create table s1.short_strength as select code, load_date, date_index,
 cast((1/(1+EXP(0-r*0.1))-0.5)*2 as decimal(5,2)) as short_strength from (
@@ -609,7 +569,6 @@ create table s2.short_strength as select code, load_date, date_index,
 cast((1/(1+EXP(0-r*0.1))-0.5)*2 as decimal(5,2)) as short_strength from (
 select cast(short_position*1.00/average_volume as decimal(5,2)) as r, 
 reported_position, * from s2.transactions ) t ;
-
 
 drop table if exists s1.ask_bid;
 create table s1.ask_bid as select code, load_date, date_index, 
@@ -653,7 +612,6 @@ from (select code, load_date, date_index,
 case when market_day_high<> market_day_low then 
 (market_price- market_day_low)/(market_day_high-market_day_low) 
 else 0 end as price_ratio from s2.transactions ) t ;
-
 
 END
 
