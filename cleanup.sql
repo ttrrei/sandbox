@@ -722,11 +722,6 @@ create table s2.eavt_curve as select entity, dindex as date_index, attrib
 ,case when valu::json->>2 in('NaN', 'Infinity', '-Infinity' ) then null else valu::json->>2 end::numeric as second
 from s2.eavt where attrib like '%_linear' or attrib like '%_quadratic';
 
-
-
-
-
-
 select market_volume, * from s1.transactions limit 100;
 
 
