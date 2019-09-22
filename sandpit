@@ -1,0 +1,146 @@
+drop table if exists increase_ratio;
+create temporary table increase_ratio as 
+select code, date_index, increase_ratio,
+row_number() over(partition by date_index order by increase_ratio desc) as rank from (
+select code, date_index,
+case when cast(market_previous_close*100 as decimal(10,4))> 0 
+then (cast(market_price as numeric) - cast(market_previous_close as numeric))*100/cast(market_previous_close as numeric)
+else -100 end as increase_ratio
+from transactions ) t
+order by 2,3 desc;
+
+drop table if exists increase_calculation;
+create temporary table  increase_calculation as 
+select  code, date_index, iratio00 as ratio_cur, rank00 as rank00,
+(iratio00 + iratio01 + iratio02)/3 as ratio_avg03, 
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04)/5 as ratio_avg05,
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04 + 
+iratio05 + iratio06 + iratio07 + iratio08 + iratio09)/10 as ratio_avg10,
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04 + 
+iratio05 + iratio06 + iratio07 + iratio08 + iratio09 +
+iratio10 + iratio11 + iratio12 + iratio13 + iratio14 + 
+iratio15 + iratio16 + iratio17 + iratio18 + iratio19)/20 as ratio_avg20,
+greatest(iratio00 , iratio01 , iratio02) as ratio_grt03,
+least(iratio00 , iratio01 , iratio02) as ratio_lst03,
+greatest(iratio00 , iratio01 , iratio02 , iratio03 , iratio04) as ratio_grt05,
+least(iratio00 , iratio01 , iratio02 , iratio03 , iratio04) as ratio_lst05,
+greatest(iratio00 , iratio01 , iratio02 , iratio03 , iratio04 , 
+iratio05 , iratio06 , iratio07 , iratio08 , iratio09) as ratio_grt10,
+least(iratio00 , iratio01 , iratio02 , iratio03 , iratio04 , 
+iratio05 , iratio06 , iratio07 , iratio08 , iratio09) as ratio_lst10,
+greatest(iratio00 , iratio01 , iratio02 , iratio03 , iratio04 , 
+iratio05 , iratio06 , iratio07 , iratio08 , iratio09 ,
+iratio10 , iratio11 , iratio12 , iratio13 , iratio14 , 
+iratio15 , iratio16 , iratio17 , iratio18 , iratio19) as ratio_grt20,
+least(iratio00 , iratio01 , iratio02 , iratio03 , iratio04 , 
+iratio05 , iratio06 , iratio07 , iratio08 , iratio09 ,
+iratio10 , iratio11 , iratio12 , iratio13 , iratio14 , 
+iratio15 , iratio16 , iratio17 , iratio18 , iratio19) as ratio_lst20,
+(rank00 + rank01 + rank02)/3 as rank_avg03, 
+(rank00 + rank01 + rank02 + rank03 + rank04)/5 as rank_avg05,
+(rank00 + rank01 + rank02 + rank03 + rank04 + 
+rank05 + rank06 + rank07 + rank08 + rank09)/10 as rank_avg10,
+(rank00 + rank01 + rank02 + rank03 + rank04 + 
+rank05 + rank06 + rank07 + rank08 + rank09 +
+rank10 + rank11 + rank12 + rank13 + rank14 + 
+rank15 + rank16 + rank17 + rank18 + rank19)/20 as rank_avg20,
+greatest(rank00 , rank01 , rank02) as rank_grt03,
+least(rank00 , rank01 , rank02) as rank_lst03,
+greatest(rank00 , rank01 , rank02 , rank03 , rank04) as rank_grt05,
+least(rank00 , rank01 , rank02 , rank03 , rank04) as rank_lst05,
+greatest(rank00 , rank01 , rank02 , rank03 , rank04 , 
+rank05 , rank06 , rank07 , rank08 , rank09) as rank_grt10,
+least(rank00 , rank01 , rank02 , rank03 , rank04 , 
+rank05 , rank06 , rank07 , rank08 , rank09) as rank_lst10,
+greatest(rank00 , rank01 , rank02 , rank03 , rank04 , 
+rank05 , rank06 , rank07 , rank08 , rank09 ,
+rank10 , rank11 , rank12 , rank13 , rank14 , 
+rank15 , rank16 , rank17 , rank18 , rank19) as rank_grt20,
+least(rank00 , rank01 , rank02 , rank03 , rank04 , 
+rank05 , rank06 , rank07 , rank08 , rank09 ,
+rank10 , rank11 , rank12 , rank13 , rank14 , 
+rank15 , rank16 , rank17 , rank18 , rank19) as rank_lst20
+from ( select code, date_index, increase_ratio as iratio00, rank as rank00
+, lag(increase_ratio, 01) over(partition by code order by date_index asc) iratio01
+, lag(increase_ratio, 02) over(partition by code order by date_index asc) iratio02
+, lag(increase_ratio, 03) over(partition by code order by date_index asc) iratio03
+, lag(increase_ratio, 04) over(partition by code order by date_index asc) iratio04
+, lag(increase_ratio, 05) over(partition by code order by date_index asc) iratio05
+, lag(increase_ratio, 06) over(partition by code order by date_index asc) iratio06
+, lag(increase_ratio, 07) over(partition by code order by date_index asc) iratio07
+, lag(increase_ratio, 08) over(partition by code order by date_index asc) iratio08
+, lag(increase_ratio, 09) over(partition by code order by date_index asc) iratio09
+, lag(increase_ratio, 10) over(partition by code order by date_index asc) iratio10
+, lag(increase_ratio, 11) over(partition by code order by date_index asc) iratio11
+, lag(increase_ratio, 12) over(partition by code order by date_index asc) iratio12
+, lag(increase_ratio, 13) over(partition by code order by date_index asc) iratio13
+, lag(increase_ratio, 14) over(partition by code order by date_index asc) iratio14
+, lag(increase_ratio, 15) over(partition by code order by date_index asc) iratio15
+, lag(increase_ratio, 16) over(partition by code order by date_index asc) iratio16
+, lag(increase_ratio, 17) over(partition by code order by date_index asc) iratio17
+, lag(increase_ratio, 18) over(partition by code order by date_index asc) iratio18
+, lag(increase_ratio, 19) over(partition by code order by date_index asc) iratio19
+, lag(rank, 01) over(partition by code order by date_index asc) rank01
+, lag(rank, 02) over(partition by code order by date_index asc) rank02
+, lag(rank, 03) over(partition by code order by date_index asc) rank03
+, lag(rank, 04) over(partition by code order by date_index asc) rank04
+, lag(rank, 05) over(partition by code order by date_index asc) rank05
+, lag(rank, 06) over(partition by code order by date_index asc) rank06
+, lag(rank, 07) over(partition by code order by date_index asc) rank07
+, lag(rank, 08) over(partition by code order by date_index asc) rank08
+, lag(rank, 09) over(partition by code order by date_index asc) rank09
+, lag(rank, 10) over(partition by code order by date_index asc) rank10
+, lag(rank, 11) over(partition by code order by date_index asc) rank11
+, lag(rank, 12) over(partition by code order by date_index asc) rank12
+, lag(rank, 13) over(partition by code order by date_index asc) rank13
+, lag(rank, 14) over(partition by code order by date_index asc) rank14
+, lag(rank, 15) over(partition by code order by date_index asc) rank15
+, lag(rank, 16) over(partition by code order by date_index asc) rank16
+, lag(rank, 17) over(partition by code order by date_index asc) rank17
+, lag(rank, 18) over(partition by code order by date_index asc) rank18
+, lag(rank, 19) over(partition by code order by date_index asc) rank19
+from increase_ratio  ) t where date_index > 20;
+
+
+select * ,
+cast((1/(1+EXP(0-increase_ratio*0.3))) as decimal(5,3))
+as scaled
+from increase_ratio  
+where increase_ratio <> 0.0
+order by increase_ratio ;
+
+
+select cast(1/(1+exp(0- (forward_pe-15) *0.02)) as decimal(5,3)) ,  * 
+from pe_rank order by date_index, code; 
+
+
+drop table if exists pe_rank;
+create temporary table pe_rank as 
+select code, date_index, case when  forward_pe is null then -999 else forward_pe end as forward_pe,
+row_number() over(partition by date_index order by case when forward_pe is null then -999 else forward_pe end desc) as rank
+from transactions t
+order by 2 desc , 3 desc;
+
+select * from pe_rank;
+
+
+
+select code, date_index, list, row_number() over (partition by code, date_index order by list) from (
+select code, date_index, json_array_elements_text(json_build_array( rk00, rk01, rk02)) as list from (
+select code, date_index, rank as rk00 
+, lag(rank, 01) over (partition by code order by date_index) as rk01
+, lag(rank, 02) over (partition by code order by date_index) as rk02
+from pe_rank ) t where date_index not in (1,2) ) t;
+
+
+select code, date_index, list, row_number() over (partition by code, date_index order by list) from (
+select code, date_index, json_array_elements_text(json_build_array( rk00, rk01, rk02, rk03, rk04)) as list from (
+select code, date_index, rank as rk00 
+, lag(rank, 01) over (partition by code order by date_index) as rk01
+, lag(rank, 02) over (partition by code order by date_index) as rk02
+, lag(rank, 03) over (partition by code order by date_index) as rk03
+, lag(rank, 04) over (partition by code order by date_index) as rk04
+from pe_rank ) t where date_index not in (1,2,3,4) ) t;
+
+
+
