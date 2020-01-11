@@ -1,0 +1,113 @@
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
+
+import java.io.File;
+import java.util.ArrayList;
+
+public class Driver {
+
+    public static void main(String[] args) throws Exception {
+        final int loop = 10;
+        int count = 0;
+
+        ArrayList<String> full = new ArrayList<String>();
+
+        ArrayList<String> values = new ArrayList<String>();
+        ArrayList<String> consensus = new ArrayList<String>();
+
+        File input = new File("C:/Users/xlu/Temp/example.html");
+
+        while ( count < loop ) {
+            count ++;
+
+            Elements valid_element = Jsoup.parse(input, "UTF-8", "http://example.com/").getElementsByClass("cr_dataTable");
+
+            int consensus_index = getConsensusIndex(valid_element);
+            int value_index = getValueIndex(valid_element);
+
+            if( consensus_index != -1 && consensus.size() == 0 ) {
+                Elements sub = valid_element.get(consensus_index).getElementsByClass("data_data");
+                consensus.add(sub.get(2).wholeText());
+                consensus.add(sub.get(5).wholeText());
+                consensus.add(sub.get(8).wholeText());
+                consensus.add(sub.get(11).wholeText());
+                consensus.add(sub.get(14).wholeText());
+
+            }
+
+
+            if( value_index != -1  && values.size() == 0) {
+                Elements sub = valid_element.get(value_index).getElementsByClass("data_data");
+                values.add(sub.get(0).wholeText());
+                values.add(sub.get(1).wholeText());
+                values.add(sub.get(2).wholeText());
+                values.add(sub.get(3).wholeText());
+                values.add(sub.get(4).wholeText());
+            }
+
+
+            if (consensus.size() > 0 && values.size() > 0)
+                count = 100;
+
+        }
+
+        if(consensus.size() == 0 ){
+            full.add("");
+            full.add("");
+            full.add("");
+            full.add("");
+            full.add("");
+        }else {
+            full.addAll(consensus);
+        }
+
+
+        if(values.size() == 0 ){
+            full.add("");
+            full.add("");
+            full.add("");
+            full.add("");
+            full.add("");
+        }else {
+            full.addAll(values);
+        }
+
+        System.out.println(full);
+
+    }
+
+
+    private static int getConsensusIndex(Elements valid_element) {
+
+        for (int i = 0 ; i < valid_element.size(); i ++) {
+            if(valid_element.get(i).getElementsByTag("thead").size() >0
+                    &&valid_element.get(i).getElementsByTag("th").size() > 2
+                    &&valid_element.get(i).getElementsByTag("th").get(1).wholeText().equals("3 Months Ago")
+                    &&valid_element.get(i).getElementsByTag("th").get(2).wholeText().equals("1 Month Ago")
+                    &&valid_element.get(i).getElementsByClass("data_data").size() == 15
+            )
+                return i;
+        }
+        return -1;
+    }
+
+
+    private static int getValueIndex(Elements valid_element) {
+
+        for (int i =0 ; i < valid_element.size(); i ++) {
+            if(valid_element.get(i).getElementsByTag("thead").size() ==0
+                    &&valid_element.get(i).getElementsByClass("data_lbl").size() == 5
+                    &&valid_element.get(i).getElementsByClass("data_data").size() == 5
+            )
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+
+
+
+}
