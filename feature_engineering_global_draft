@@ -1,0 +1,1305 @@
+
+
+drop table if exists temp_global_indicator_raw;
+create temporary table temp_global_indicator_raw as
+select date_index, load_date, count(*)
+, cast(sum((market_price - market_open) * market_volume) as decimal(16,2)) as full_trading_strength
+, cast(sum(market_price * short_position)as decimal(16,2)) as full_short_size
+, cast(sum(market_price * market_volume)as decimal(16,2)) / cast(sum(market_price * short_position)as decimal(16,2))  as full_active_ts
+, cast(sum(forward_pe * market_volume) as decimal(16,2)) as full_over_value
+
+, cast(sum(case when rank_pe > 50 then 0 else (market_price - market_open) * market_volume end ) as decimal(16,2)) as pe_trading_strength
+, cast(sum(case when rank_pe > 50 then 0 else (market_price * short_position) end ) as decimal(16,2)) as pe_short_size
+, cast(sum(case when rank_pe > 50 then 0 else (market_price * market_volume) end ) as decimal(16,2))
+/ cast(sum(case when rank_pe > 50 then 0 else (market_price * short_position) end ) as decimal(16,2)) as pe_active_ts
+, cast(sum(case when rank_pe > 50 then 0 else (forward_pe * market_volume) end) as decimal(16,2)) as pe_over_value
+
+, cast(sum(case when rank_volume > 50 then 0 else (market_price - market_open) * market_volume end ) as decimal(16,2)) as volume_trading_strength
+, cast(sum(case when rank_volume > 50 then 0 else (market_price * short_position) end ) as decimal(16,2)) as volume_short_size
+, cast(sum(case when rank_volume > 50 then 0 else (market_price * market_volume) end ) as decimal(16,2))
+/ cast(sum(case when rank_volume > 50 then 0 else (market_price * short_position) end ) as decimal(16,2)) as volume_active_ts
+, cast(sum(case when rank_volume > 50 then 0 else (forward_pe * market_volume) end) as decimal(16,2)) as volume_over_value
+
+from (select *
+, row_number() over (partition by  load_date order by case when forward_pe is null then 0 else forward_pe end  desc) as rank_pe
+, row_number() over (partition by  load_date order by case when market_price * market_volume is null then 0 else market_price * market_volume end  desc) as rank_volume
+from transactions) temp
+where market_price is not null and  market_open is not null and market_volume is not null and  short_position is not null
+group by date_index,load_date order by date_index, load_date;
+
+
+drop table if exists scale_idc;
+create temp table scale_idc as
+select 1 as idx
+, min(full_trading_strength) as min_full_trading_strength
+, avg(full_trading_strength) as avg_full_trading_strength
+
+, min(full_short_size) as min_full_short_size
+, avg(full_short_size) as avg_full_short_size
+
+, min(full_active_ts) as min_full_active_ts
+, avg(full_active_ts) as avg_full_active_ts
+
+, min(full_over_value) as min_full_over_value
+, avg(full_over_value) as avg_full_over_value
+
+, min(pe_trading_strength) as min_pe_trading_strength
+, avg(pe_trading_strength) as avg_pe_trading_strength
+
+, min(pe_short_size) as min_pe_short_size
+, avg(pe_short_size) as avg_pe_short_size
+
+, min(pe_active_ts) as min_pe_active_ts
+, avg(pe_active_ts) as avg_pe_active_ts
+
+, min(pe_over_value) as min_pe_over_value
+, avg(pe_over_value) as avg_pe_over_value
+
+, min(volume_trading_strength) as min_volume_trading_strength
+, avg(volume_trading_strength) as avg_volume_trading_strength
+
+, min(volume_short_size) as min_volume_short_size
+, avg(volume_short_size) as avg_volume_short_size
+
+, min(volume_active_ts) as min_volume_active_ts
+, avg(volume_active_ts) as avg_volume_active_ts
+
+, min(volume_over_value) as min_volume_over_value
+, avg(volume_over_value) as avg_volume_over_value
+
+from temp_global_indicator_raw;
+
+drop table if exists temp_global_indicator;
+create temp  table temp_global_indicator as select date_index, load_date
+,  ( full_trading_strength - min_full_trading_strength) / (avg_full_trading_strength - min_full_trading_strength) as full_trading_strength
+,  ( full_short_size - min_full_short_size) / (avg_full_short_size - min_full_short_size) as full_short_size
+,  ( full_active_ts - min_full_active_ts) / (avg_full_active_ts - min_full_active_ts) as full_active_ts
+,  ( full_over_value - min_full_over_value) / (avg_full_over_value - min_full_over_value) as full_over_value
+,  ( pe_trading_strength - min_pe_trading_strength) / (avg_pe_trading_strength - min_pe_trading_strength) as pe_trading_strength
+,  ( pe_short_size - min_pe_short_size) / (avg_pe_short_size - min_pe_short_size) as pe_short_size
+,  ( pe_active_ts - min_pe_active_ts) / (avg_pe_active_ts - min_pe_active_ts) as pe_active_ts
+,  ( pe_over_value - min_pe_over_value) / (avg_pe_over_value - min_pe_over_value) as pe_over_value
+,  ( volume_trading_strength - min_volume_trading_strength) / (avg_volume_trading_strength - min_volume_trading_strength) as volume_trading_strength
+,  ( volume_short_size - min_volume_short_size) / (avg_volume_short_size - min_volume_short_size) as volume_short_size
+,  ( volume_active_ts - min_volume_active_ts) / (avg_volume_active_ts - min_volume_active_ts) as volume_active_ts
+,  ( volume_over_value - min_volume_over_value) / (avg_volume_over_value - min_volume_over_value) as volume_over_value
+from temp_global_indicator_raw i cross join scale_idc s;
+
+drop table if exists temp_full_staging;
+create temporary table temp_full_staging as
+select date_index, load_date
+, json_build_array(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19) as idx20
+, json_build_array(0,1,2,3,4,5,6,7,8,9) as idx10
+, json_build_array(0,1,2,3,4) as idx05
+, json_build_array(0,1,2) as idx03
+, (ts_00 + ts_01 + ts_02)/3 as avg_ts_03
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04)/5 as avg_ts_05
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04 + ts_05 + ts_06 + ts_07 + ts_08 + ts_09)/ 10 as avg_ts_10
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04 + ts_05 + ts_06 + ts_07 + ts_08 + ts_09
+  +ts_10 + ts_11 + ts_12 + ts_13 + ts_14 + ts_15 + ts_16 + ts_17 + ts_18 + ts_19
+    )/20 as avg_ts_20
+, json_build_array(ts_02 , ts_01 , ts_00) as lst_ts_03
+, json_build_array(ts_04 , ts_03 , ts_02 , ts_01 , ts_00) as lst_ts_05
+, json_build_array(ts_09 , ts_08 , ts_07 , ts_06 , ts_05 , ts_04 , ts_03 , ts_02 , ts_01 , ts_00) as lst_ts_10
+, json_build_array(ts_19 , ts_18 , ts_17 , ts_16 , ts_15 , ts_14 , ts_13 , ts_12 , ts_11 , ts_10
+  , ts_09 , ts_08 , ts_07 , ts_06 , ts_05 , ts_04 , ts_03 , ts_02 , ts_01 , ts_00
+    ) as lst_ts_20
+, (ss_00 + ss_01 + ss_02)/3 as avg_ss_03
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04)/5 as avg_ss_05
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04 + ss_05 + ss_06 + ss_07 + ss_08 + ss_09)/ 10 as avg_ss_10
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04 + ss_05 + ss_06 + ss_07 + ss_08 + ss_09
+  +ss_10 + ss_11 + ss_12 + ss_13 + ss_14 + ss_15 + ss_16 + ss_17 + ss_18 + ss_19
+    )/20 as avg_ss_20
+, json_build_array(ss_02 , ss_01 , ss_00) as lst_ss_03
+, json_build_array(ss_04 , ss_03 , ss_02 , ss_01 , ss_00) as lst_ss_05
+, json_build_array(ss_09 , ss_08 , ss_07 , ss_06 , ss_05 , ss_04 , ss_03 , ss_02 , ss_01 , ss_00) as lst_ss_10
+, json_build_array(ss_19 , ss_18 , ss_17 , ss_16 , ss_15 , ss_14 , ss_13 , ss_12 , ss_11 , ss_10
+  , ss_09 , ss_08 , ss_07 , ss_06 , ss_05 , ss_04 , ss_03 , ss_02 , ss_01 , ss_00
+    ) as lst_ss_20
+, (at_00 + at_01 + at_02)/3 as avg_at_03
+, (at_00 + at_01 + at_02 + at_03 + at_04)/5 as avg_at_05
+, (at_00 + at_01 + at_02 + at_03 + at_04 + at_05 + at_06 + at_07 + at_08 + at_09)/ 10 as avg_at_10
+, (at_00 + at_01 + at_02 + at_03 + at_04 + at_05 + at_06 + at_07 + at_08 + at_09
+  +at_10 + at_11 + at_12 + at_13 + at_14 + at_15 + at_16 + at_17 + at_18 + at_19
+    )/20 as avg_at_20
+, json_build_array(at_02 , at_01 , at_00) as lst_at_03
+, json_build_array(at_04 , at_03 , at_02 , at_01 , at_00) as lst_at_05
+, json_build_array(at_09 , at_08 , at_07 , at_06 , at_05 , at_04 , at_03 , at_02 , at_01 , at_00) as lst_at_10
+, json_build_array(at_19 , at_18 , at_17 , at_16 , at_15 , at_14 , at_13 , at_12 , at_11 , at_10
+  , at_09 , at_08 , at_07 , at_06 , at_05 , at_04 , at_03 , at_02 , at_01 , at_00
+    ) as lst_at_20
+, (ov_00 + ov_01 + ov_02)/3 as avg_ov_03
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04)/5 as avg_ov_05
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04 + ov_05 + ov_06 + ov_07 + ov_08 + ov_09)/ 10 as avg_ov_10
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04 + ov_05 + ov_06 + ov_07 + ov_08 + ov_09
+  +ov_10 + ov_11 + ov_12 + ov_13 + ov_14 + ov_15 + ov_16 + ov_17 + ov_18 + ov_19
+    )/20 as avg_ov_20
+, json_build_array(ov_02 , ov_01 , ov_00) as lst_ov_03
+, json_build_array(ov_04 , ov_03 , ov_02 , ov_01 , ov_00) as lst_ov_05
+, json_build_array(ov_09 , ov_08 , ov_07 , ov_06 , ov_05 , ov_04 , ov_03 , ov_02 , ov_01 , ov_00) as lst_ov_10
+, json_build_array(ov_19 , ov_18 , ov_17 , ov_16 , ov_15 , ov_14 , ov_13 , ov_12 , ov_11 , ov_10
+  , ov_09 , ov_08 , ov_07 , ov_06 , ov_05 , ov_04 , ov_03 , ov_02 , ov_01 , ov_00
+    ) as lst_ov_20
+from (select  date_index, load_date
+, full_trading_strength as ts_00
+, lag(full_trading_strength, 01) over( order by date_index ) ts_01
+, lag(full_trading_strength, 02) over( order by date_index ) ts_02
+, lag(full_trading_strength, 03) over( order by date_index ) ts_03
+, lag(full_trading_strength, 04) over( order by date_index ) ts_04
+, lag(full_trading_strength, 05) over( order by date_index ) ts_05
+, lag(full_trading_strength, 06) over( order by date_index ) ts_06
+, lag(full_trading_strength, 07) over( order by date_index ) ts_07
+, lag(full_trading_strength, 08) over( order by date_index ) ts_08
+, lag(full_trading_strength, 09) over( order by date_index ) ts_09
+, lag(full_trading_strength, 10) over( order by date_index ) ts_10
+, lag(full_trading_strength, 11) over( order by date_index ) ts_11
+, lag(full_trading_strength, 12) over( order by date_index ) ts_12
+, lag(full_trading_strength, 13) over( order by date_index ) ts_13
+, lag(full_trading_strength, 14) over( order by date_index ) ts_14
+, lag(full_trading_strength, 15) over( order by date_index ) ts_15
+, lag(full_trading_strength, 16) over( order by date_index ) ts_16
+, lag(full_trading_strength, 17) over( order by date_index ) ts_17
+, lag(full_trading_strength, 18) over( order by date_index ) ts_18
+, lag(full_trading_strength, 19) over( order by date_index ) ts_19
+, full_short_size as ss_00
+, lag(full_short_size, 01) over( order by date_index ) ss_01
+, lag(full_short_size, 02) over( order by date_index ) ss_02
+, lag(full_short_size, 03) over( order by date_index ) ss_03
+, lag(full_short_size, 04) over( order by date_index ) ss_04
+, lag(full_short_size, 05) over( order by date_index ) ss_05
+, lag(full_short_size, 06) over( order by date_index ) ss_06
+, lag(full_short_size, 07) over( order by date_index ) ss_07
+, lag(full_short_size, 08) over( order by date_index ) ss_08
+, lag(full_short_size, 09) over( order by date_index ) ss_09
+, lag(full_short_size, 10) over( order by date_index ) ss_10
+, lag(full_short_size, 11) over( order by date_index ) ss_11
+, lag(full_short_size, 12) over( order by date_index ) ss_12
+, lag(full_short_size, 13) over( order by date_index ) ss_13
+, lag(full_short_size, 14) over( order by date_index ) ss_14
+, lag(full_short_size, 15) over( order by date_index ) ss_15
+, lag(full_short_size, 16) over( order by date_index ) ss_16
+, lag(full_short_size, 17) over( order by date_index ) ss_17
+, lag(full_short_size, 18) over( order by date_index ) ss_18
+, lag(full_short_size, 19) over( order by date_index ) ss_19
+, full_active_ts as at_00
+, lag(full_active_ts, 01) over( order by date_index ) at_01
+, lag(full_active_ts, 02) over( order by date_index ) at_02
+, lag(full_active_ts, 03) over( order by date_index ) at_03
+, lag(full_active_ts, 04) over( order by date_index ) at_04
+, lag(full_active_ts, 05) over( order by date_index ) at_05
+, lag(full_active_ts, 06) over( order by date_index ) at_06
+, lag(full_active_ts, 07) over( order by date_index ) at_07
+, lag(full_active_ts, 08) over( order by date_index ) at_08
+, lag(full_active_ts, 09) over( order by date_index ) at_09
+, lag(full_active_ts, 10) over( order by date_index ) at_10
+, lag(full_active_ts, 11) over( order by date_index ) at_11
+, lag(full_active_ts, 12) over( order by date_index ) at_12
+, lag(full_active_ts, 13) over( order by date_index ) at_13
+, lag(full_active_ts, 14) over( order by date_index ) at_14
+, lag(full_active_ts, 15) over( order by date_index ) at_15
+, lag(full_active_ts, 16) over( order by date_index ) at_16
+, lag(full_active_ts, 17) over( order by date_index ) at_17
+, lag(full_active_ts, 18) over( order by date_index ) at_18
+, lag(full_active_ts, 19) over( order by date_index ) at_19
+, full_over_value as ov_00
+, lag(full_over_value, 01) over( order by date_index ) ov_01
+, lag(full_over_value, 02) over( order by date_index ) ov_02
+, lag(full_over_value, 03) over( order by date_index ) ov_03
+, lag(full_over_value, 04) over( order by date_index ) ov_04
+, lag(full_over_value, 05) over( order by date_index ) ov_05
+, lag(full_over_value, 06) over( order by date_index ) ov_06
+, lag(full_over_value, 07) over( order by date_index ) ov_07
+, lag(full_over_value, 08) over( order by date_index ) ov_08
+, lag(full_over_value, 09) over( order by date_index ) ov_09
+, lag(full_over_value, 10) over( order by date_index ) ov_10
+, lag(full_over_value, 11) over( order by date_index ) ov_11
+, lag(full_over_value, 12) over( order by date_index ) ov_12
+, lag(full_over_value, 13) over( order by date_index ) ov_13
+, lag(full_over_value, 14) over( order by date_index ) ov_14
+, lag(full_over_value, 15) over( order by date_index ) ov_15
+, lag(full_over_value, 16) over( order by date_index ) ov_16
+, lag(full_over_value, 17) over( order by date_index ) ov_17
+, lag(full_over_value, 18) over( order by date_index ) ov_18
+, lag(full_over_value, 19) over( order by date_index ) ov_19
+from temp_global_indicator ) temp ;
+
+drop table if exists temp_full_staging_add_20;
+create temporary table temp_full_staging_add_20 as
+select date_index, load_date
+,   regr_slope(lst_ts_20,idx20) as ts_20_s, regr_intercept(lst_ts_20,idx20) as ts_20_i
+,   regr_slope(lst_at_20,idx20) as at_20_s, regr_intercept(lst_at_20,idx20) as at_20_i
+,   regr_slope(lst_ov_20,idx20) as ov_20_s, regr_intercept(lst_ov_20,idx20) as ov_20_i
+,   regr_slope(lst_ss_20,idx20) as ss_20_s, regr_intercept(lst_ss_20,idx20) as ss_20_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx20) as decimal(32,7))          as idx20
+,     cast(json_array_elements_text(lst_ts_20) as decimal(32,7))      as lst_ts_20
+,     cast(json_array_elements_text(lst_at_20) as decimal(32,7))      as lst_at_20
+,     cast(json_array_elements_text(lst_ov_20) as decimal(32,7))      as lst_ov_20
+,     cast(json_array_elements_text(lst_ss_20) as decimal(32,7))      as lst_ss_20
+from temp_full_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+
+drop table if exists temp_full_staging_add_10;
+create temporary table temp_full_staging_add_10 as
+select date_index, load_date
+,   regr_slope(lst_ts_10,idx10) as ts_10_s, regr_intercept(lst_ts_10,idx10) as ts_10_i
+,   regr_slope(lst_at_10,idx10) as at_10_s, regr_intercept(lst_at_10,idx10) as at_10_i
+,   regr_slope(lst_ov_10,idx10) as ov_10_s, regr_intercept(lst_ov_10,idx10) as ov_10_i
+,   regr_slope(lst_ss_10,idx10) as ss_10_s, regr_intercept(lst_ss_10,idx10) as ss_10_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx10) as decimal(32,7))          as idx10
+,     cast(json_array_elements_text(lst_ts_10) as decimal(32,7))      as lst_ts_10
+,     cast(json_array_elements_text(lst_at_10) as decimal(32,7))      as lst_at_10
+,     cast(json_array_elements_text(lst_ov_10) as decimal(32,7))      as lst_ov_10
+,     cast(json_array_elements_text(lst_ss_10) as decimal(32,7))      as lst_ss_10
+from temp_full_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+drop table if exists temp_full_staging_add_05;
+create temporary table temp_full_staging_add_05 as
+select date_index, load_date
+,   regr_slope(lst_ts_05,idx05) as ts_05_s, regr_intercept(lst_ts_05,idx05) as ts_05_i
+,   regr_slope(lst_at_05,idx05) as at_05_s, regr_intercept(lst_at_05,idx05) as at_05_i
+,   regr_slope(lst_ov_05,idx05) as ov_05_s, regr_intercept(lst_ov_05,idx05) as ov_05_i
+,   regr_slope(lst_ss_05,idx05) as ss_05_s, regr_intercept(lst_ss_05,idx05) as ss_05_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx05) as decimal(32,7))          as idx05
+,     cast(json_array_elements_text(lst_ts_05) as decimal(32,7))      as lst_ts_05
+,     cast(json_array_elements_text(lst_at_05) as decimal(32,7))      as lst_at_05
+,     cast(json_array_elements_text(lst_ov_05) as decimal(32,7))      as lst_ov_05
+,     cast(json_array_elements_text(lst_ss_05) as decimal(32,7))      as lst_ss_05
+from temp_full_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+drop table if exists temp_full_staging_add_03;
+create temporary table temp_full_staging_add_03 as
+select date_index, load_date
+,   regr_slope(lst_ts_03,idx03) as ts_03_s, regr_intercept(lst_ts_03,idx03) as ts_03_i
+,   regr_slope(lst_at_03,idx03) as at_03_s, regr_intercept(lst_at_03,idx03) as at_03_i
+,   regr_slope(lst_ov_03,idx03) as ov_03_s, regr_intercept(lst_ov_03,idx03) as ov_03_i
+,   regr_slope(lst_ss_03,idx03) as ss_03_s, regr_intercept(lst_ss_03,idx03) as ss_03_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx03) as decimal(32,7))          as idx03
+,     cast(json_array_elements_text(lst_ts_03) as decimal(32,7))      as lst_ts_03
+,     cast(json_array_elements_text(lst_at_03) as decimal(32,7))      as lst_at_03
+,     cast(json_array_elements_text(lst_ov_03) as decimal(32,7))      as lst_ov_03
+,     cast(json_array_elements_text(lst_ss_03) as decimal(32,7))      as lst_ss_03
+from temp_full_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+
+drop table if exists temp_full_staging_add;
+create temp table temp_full_staging_add as
+select a.date_index, a.load_date
+, a.ts_20_s, a.at_20_s, a.ov_20_s, a.ss_20_s
+, b.ts_10_s, b.at_10_s, b.ov_10_s, b.ss_10_s
+, c.ts_05_s, c.at_05_s, c.ov_05_s, c.ss_05_s
+, d.ts_03_s, d.at_03_s, d.ov_03_s, d.ss_03_s
+from temp_full_staging_add_20 a
+inner join temp_full_staging_add_10 b on a.date_index = b.date_index and a.load_date = b.load_date
+inner join temp_full_staging_add_05 c on b.date_index = c.date_index and a.load_date = c.load_date
+inner join temp_full_staging_add_03 d on a.date_index = d.date_index and a.load_date = d.load_date;
+
+
+drop table if exists temp_pe_staging;
+create temporary table temp_pe_staging as
+select date_index, load_date
+, json_build_array(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19) as idx20
+, json_build_array(0,1,2,3,4,5,6,7,8,9) as idx10
+, json_build_array(0,1,2,3,4) as idx05
+, json_build_array(0,1,2) as idx03
+, (ts_00 + ts_01 + ts_02)/3 as avg_ts_03
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04)/5 as avg_ts_05
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04 + ts_05 + ts_06 + ts_07 + ts_08 + ts_09)/ 10 as avg_ts_10
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04 + ts_05 + ts_06 + ts_07 + ts_08 + ts_09
+  +ts_10 + ts_11 + ts_12 + ts_13 + ts_14 + ts_15 + ts_16 + ts_17 + ts_18 + ts_19
+    )/20 as avg_ts_20
+, json_build_array(ts_02 , ts_01 , ts_00) as lst_ts_03
+, json_build_array(ts_04 , ts_03 , ts_02 , ts_01 , ts_00) as lst_ts_05
+, json_build_array(ts_09 , ts_08 , ts_07 , ts_06 , ts_05 , ts_04 , ts_03 , ts_02 , ts_01 , ts_00) as lst_ts_10
+, json_build_array(ts_19 , ts_18 , ts_17 , ts_16 , ts_15 , ts_14 , ts_13 , ts_12 , ts_11 , ts_10
+  , ts_09 , ts_08 , ts_07 , ts_06 , ts_05 , ts_04 , ts_03 , ts_02 , ts_01 , ts_00
+    ) as lst_ts_20
+, (ss_00 + ss_01 + ss_02)/3 as avg_ss_03
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04)/5 as avg_ss_05
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04 + ss_05 + ss_06 + ss_07 + ss_08 + ss_09)/ 10 as avg_ss_10
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04 + ss_05 + ss_06 + ss_07 + ss_08 + ss_09
+  +ss_10 + ss_11 + ss_12 + ss_13 + ss_14 + ss_15 + ss_16 + ss_17 + ss_18 + ss_19
+    )/20 as avg_ss_20
+, json_build_array(ss_02 , ss_01 , ss_00) as lst_ss_03
+, json_build_array(ss_04 , ss_03 , ss_02 , ss_01 , ss_00) as lst_ss_05
+, json_build_array(ss_09 , ss_08 , ss_07 , ss_06 , ss_05 , ss_04 , ss_03 , ss_02 , ss_01 , ss_00) as lst_ss_10
+, json_build_array(ss_19 , ss_18 , ss_17 , ss_16 , ss_15 , ss_14 , ss_13 , ss_12 , ss_11 , ss_10
+  , ss_09 , ss_08 , ss_07 , ss_06 , ss_05 , ss_04 , ss_03 , ss_02 , ss_01 , ss_00
+    ) as lst_ss_20
+, (at_00 + at_01 + at_02)/3 as avg_at_03
+, (at_00 + at_01 + at_02 + at_03 + at_04)/5 as avg_at_05
+, (at_00 + at_01 + at_02 + at_03 + at_04 + at_05 + at_06 + at_07 + at_08 + at_09)/ 10 as avg_at_10
+, (at_00 + at_01 + at_02 + at_03 + at_04 + at_05 + at_06 + at_07 + at_08 + at_09
+  +at_10 + at_11 + at_12 + at_13 + at_14 + at_15 + at_16 + at_17 + at_18 + at_19
+    )/20 as avg_at_20
+, json_build_array(at_02 , at_01 , at_00) as lst_at_03
+, json_build_array(at_04 , at_03 , at_02 , at_01 , at_00) as lst_at_05
+, json_build_array(at_09 , at_08 , at_07 , at_06 , at_05 , at_04 , at_03 , at_02 , at_01 , at_00) as lst_at_10
+, json_build_array(at_19 , at_18 , at_17 , at_16 , at_15 , at_14 , at_13 , at_12 , at_11 , at_10
+  , at_09 , at_08 , at_07 , at_06 , at_05 , at_04 , at_03 , at_02 , at_01 , at_00
+    ) as lst_at_20
+, (ov_00 + ov_01 + ov_02)/3 as avg_ov_03
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04)/5 as avg_ov_05
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04 + ov_05 + ov_06 + ov_07 + ov_08 + ov_09)/ 10 as avg_ov_10
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04 + ov_05 + ov_06 + ov_07 + ov_08 + ov_09
+  +ov_10 + ov_11 + ov_12 + ov_13 + ov_14 + ov_15 + ov_16 + ov_17 + ov_18 + ov_19
+    )/20 as avg_ov_20
+, json_build_array(ov_02 , ov_01 , ov_00) as lst_ov_03
+, json_build_array(ov_04 , ov_03 , ov_02 , ov_01 , ov_00) as lst_ov_05
+, json_build_array(ov_09 , ov_08 , ov_07 , ov_06 , ov_05 , ov_04 , ov_03 , ov_02 , ov_01 , ov_00) as lst_ov_10
+, json_build_array(ov_19 , ov_18 , ov_17 , ov_16 , ov_15 , ov_14 , ov_13 , ov_12 , ov_11 , ov_10
+  , ov_09 , ov_08 , ov_07 , ov_06 , ov_05 , ov_04 , ov_03 , ov_02 , ov_01 , ov_00
+    ) as lst_ov_20
+from (select  date_index, load_date
+, pe_trading_strength as ts_00
+, lag(pe_trading_strength, 01) over( order by date_index ) ts_01
+, lag(pe_trading_strength, 02) over( order by date_index ) ts_02
+, lag(pe_trading_strength, 03) over( order by date_index ) ts_03
+, lag(pe_trading_strength, 04) over( order by date_index ) ts_04
+, lag(pe_trading_strength, 05) over( order by date_index ) ts_05
+, lag(pe_trading_strength, 06) over( order by date_index ) ts_06
+, lag(pe_trading_strength, 07) over( order by date_index ) ts_07
+, lag(pe_trading_strength, 08) over( order by date_index ) ts_08
+, lag(pe_trading_strength, 09) over( order by date_index ) ts_09
+, lag(pe_trading_strength, 10) over( order by date_index ) ts_10
+, lag(pe_trading_strength, 11) over( order by date_index ) ts_11
+, lag(pe_trading_strength, 12) over( order by date_index ) ts_12
+, lag(pe_trading_strength, 13) over( order by date_index ) ts_13
+, lag(pe_trading_strength, 14) over( order by date_index ) ts_14
+, lag(pe_trading_strength, 15) over( order by date_index ) ts_15
+, lag(pe_trading_strength, 16) over( order by date_index ) ts_16
+, lag(pe_trading_strength, 17) over( order by date_index ) ts_17
+, lag(pe_trading_strength, 18) over( order by date_index ) ts_18
+, lag(pe_trading_strength, 19) over( order by date_index ) ts_19
+, pe_short_size as ss_00
+, lag(pe_short_size, 01) over( order by date_index ) ss_01
+, lag(pe_short_size, 02) over( order by date_index ) ss_02
+, lag(pe_short_size, 03) over( order by date_index ) ss_03
+, lag(pe_short_size, 04) over( order by date_index ) ss_04
+, lag(pe_short_size, 05) over( order by date_index ) ss_05
+, lag(pe_short_size, 06) over( order by date_index ) ss_06
+, lag(pe_short_size, 07) over( order by date_index ) ss_07
+, lag(pe_short_size, 08) over( order by date_index ) ss_08
+, lag(pe_short_size, 09) over( order by date_index ) ss_09
+, lag(pe_short_size, 10) over( order by date_index ) ss_10
+, lag(pe_short_size, 11) over( order by date_index ) ss_11
+, lag(pe_short_size, 12) over( order by date_index ) ss_12
+, lag(pe_short_size, 13) over( order by date_index ) ss_13
+, lag(pe_short_size, 14) over( order by date_index ) ss_14
+, lag(pe_short_size, 15) over( order by date_index ) ss_15
+, lag(pe_short_size, 16) over( order by date_index ) ss_16
+, lag(pe_short_size, 17) over( order by date_index ) ss_17
+, lag(pe_short_size, 18) over( order by date_index ) ss_18
+, lag(pe_short_size, 19) over( order by date_index ) ss_19
+, pe_active_ts as at_00
+, lag(pe_active_ts, 01) over( order by date_index ) at_01
+, lag(pe_active_ts, 02) over( order by date_index ) at_02
+, lag(pe_active_ts, 03) over( order by date_index ) at_03
+, lag(pe_active_ts, 04) over( order by date_index ) at_04
+, lag(pe_active_ts, 05) over( order by date_index ) at_05
+, lag(pe_active_ts, 06) over( order by date_index ) at_06
+, lag(pe_active_ts, 07) over( order by date_index ) at_07
+, lag(pe_active_ts, 08) over( order by date_index ) at_08
+, lag(pe_active_ts, 09) over( order by date_index ) at_09
+, lag(pe_active_ts, 10) over( order by date_index ) at_10
+, lag(pe_active_ts, 11) over( order by date_index ) at_11
+, lag(pe_active_ts, 12) over( order by date_index ) at_12
+, lag(pe_active_ts, 13) over( order by date_index ) at_13
+, lag(pe_active_ts, 14) over( order by date_index ) at_14
+, lag(pe_active_ts, 15) over( order by date_index ) at_15
+, lag(pe_active_ts, 16) over( order by date_index ) at_16
+, lag(pe_active_ts, 17) over( order by date_index ) at_17
+, lag(pe_active_ts, 18) over( order by date_index ) at_18
+, lag(pe_active_ts, 19) over( order by date_index ) at_19
+, pe_over_value as ov_00
+, lag(pe_over_value, 01) over( order by date_index ) ov_01
+, lag(pe_over_value, 02) over( order by date_index ) ov_02
+, lag(pe_over_value, 03) over( order by date_index ) ov_03
+, lag(pe_over_value, 04) over( order by date_index ) ov_04
+, lag(pe_over_value, 05) over( order by date_index ) ov_05
+, lag(pe_over_value, 06) over( order by date_index ) ov_06
+, lag(pe_over_value, 07) over( order by date_index ) ov_07
+, lag(pe_over_value, 08) over( order by date_index ) ov_08
+, lag(pe_over_value, 09) over( order by date_index ) ov_09
+, lag(pe_over_value, 10) over( order by date_index ) ov_10
+, lag(pe_over_value, 11) over( order by date_index ) ov_11
+, lag(pe_over_value, 12) over( order by date_index ) ov_12
+, lag(pe_over_value, 13) over( order by date_index ) ov_13
+, lag(pe_over_value, 14) over( order by date_index ) ov_14
+, lag(pe_over_value, 15) over( order by date_index ) ov_15
+, lag(pe_over_value, 16) over( order by date_index ) ov_16
+, lag(pe_over_value, 17) over( order by date_index ) ov_17
+, lag(pe_over_value, 18) over( order by date_index ) ov_18
+, lag(pe_over_value, 19) over( order by date_index ) ov_19
+from temp_global_indicator ) temp ;
+
+drop table if exists temp_pe_staging_add_20;
+create temporary table temp_pe_staging_add_20 as
+select date_index, load_date
+,   regr_slope(lst_ts_20,idx20) as ts_20_s, regr_intercept(lst_ts_20,idx20) as ts_20_i
+,   regr_slope(lst_at_20,idx20) as at_20_s, regr_intercept(lst_at_20,idx20) as at_20_i
+,   regr_slope(lst_ov_20,idx20) as ov_20_s, regr_intercept(lst_ov_20,idx20) as ov_20_i
+,   regr_slope(lst_ss_20,idx20) as ss_20_s, regr_intercept(lst_ss_20,idx20) as ss_20_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx20) as decimal(32,7))          as idx20
+,     cast(json_array_elements_text(lst_ts_20) as decimal(32,7))      as lst_ts_20
+,     cast(json_array_elements_text(lst_at_20) as decimal(32,7))      as lst_at_20
+,     cast(json_array_elements_text(lst_ov_20) as decimal(32,7))      as lst_ov_20
+,     cast(json_array_elements_text(lst_ss_20) as decimal(32,7))      as lst_ss_20
+from temp_pe_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+
+drop table if exists temp_pe_staging_add_20;
+create temporary table temp_pe_staging_add_20 as
+select date_index, load_date
+,   regr_slope(lst_ts_20,idx20) as ts_20_s, regr_intercept(lst_ts_20,idx20) as ts_20_i
+,   regr_slope(lst_at_20,idx20) as at_20_s, regr_intercept(lst_at_20,idx20) as at_20_i
+,   regr_slope(lst_ov_20,idx20) as ov_20_s, regr_intercept(lst_ov_20,idx20) as ov_20_i
+,   regr_slope(lst_ss_20,idx20) as ss_20_s, regr_intercept(lst_ss_20,idx20) as ss_20_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx20) as decimal(32,7))          as idx20
+,     cast(json_array_elements_text(lst_ts_20) as decimal(32,7))      as lst_ts_20
+,     cast(json_array_elements_text(lst_at_20) as decimal(32,7))      as lst_at_20
+,     cast(json_array_elements_text(lst_ov_20) as decimal(32,7))      as lst_ov_20
+,     cast(json_array_elements_text(lst_ss_20) as decimal(32,7))      as lst_ss_20
+from temp_pe_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+
+drop table if exists temp_pe_staging_add_10;
+create temporary table temp_pe_staging_add_10 as
+select date_index, load_date
+,   regr_slope(lst_ts_10,idx10) as ts_10_s, regr_intercept(lst_ts_10,idx10) as ts_10_i
+,   regr_slope(lst_at_10,idx10) as at_10_s, regr_intercept(lst_at_10,idx10) as at_10_i
+,   regr_slope(lst_ov_10,idx10) as ov_10_s, regr_intercept(lst_ov_10,idx10) as ov_10_i
+,   regr_slope(lst_ss_10,idx10) as ss_10_s, regr_intercept(lst_ss_10,idx10) as ss_10_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx10) as decimal(32,7))          as idx10
+,     cast(json_array_elements_text(lst_ts_10) as decimal(32,7))      as lst_ts_10
+,     cast(json_array_elements_text(lst_at_10) as decimal(32,7))      as lst_at_10
+,     cast(json_array_elements_text(lst_ov_10) as decimal(32,7))      as lst_ov_10
+,     cast(json_array_elements_text(lst_ss_10) as decimal(32,7))      as lst_ss_10
+from temp_pe_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+drop table if exists temp_pe_staging_add_05;
+create temporary table temp_pe_staging_add_05 as
+select date_index, load_date
+,   regr_slope(lst_ts_05,idx05) as ts_05_s, regr_intercept(lst_ts_05,idx05) as ts_05_i
+,   regr_slope(lst_at_05,idx05) as at_05_s, regr_intercept(lst_at_05,idx05) as at_05_i
+,   regr_slope(lst_ov_05,idx05) as ov_05_s, regr_intercept(lst_ov_05,idx05) as ov_05_i
+,   regr_slope(lst_ss_05,idx05) as ss_05_s, regr_intercept(lst_ss_05,idx05) as ss_05_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx05) as decimal(32,7))          as idx05
+,     cast(json_array_elements_text(lst_ts_05) as decimal(32,7))      as lst_ts_05
+,     cast(json_array_elements_text(lst_at_05) as decimal(32,7))      as lst_at_05
+,     cast(json_array_elements_text(lst_ov_05) as decimal(32,7))      as lst_ov_05
+,     cast(json_array_elements_text(lst_ss_05) as decimal(32,7))      as lst_ss_05
+from temp_pe_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+drop table if exists temp_pe_staging_add_03;
+create temporary table temp_pe_staging_add_03 as
+select date_index, load_date
+,   regr_slope(lst_ts_03,idx03) as ts_03_s, regr_intercept(lst_ts_03,idx03) as ts_03_i
+,   regr_slope(lst_at_03,idx03) as at_03_s, regr_intercept(lst_at_03,idx03) as at_03_i
+,   regr_slope(lst_ov_03,idx03) as ov_03_s, regr_intercept(lst_ov_03,idx03) as ov_03_i
+,   regr_slope(lst_ss_03,idx03) as ss_03_s, regr_intercept(lst_ss_03,idx03) as ss_03_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx03) as decimal(32,7))          as idx03
+,     cast(json_array_elements_text(lst_ts_03) as decimal(32,7))      as lst_ts_03
+,     cast(json_array_elements_text(lst_at_03) as decimal(32,7))      as lst_at_03
+,     cast(json_array_elements_text(lst_ov_03) as decimal(32,7))      as lst_ov_03
+,     cast(json_array_elements_text(lst_ss_03) as decimal(32,7))      as lst_ss_03
+from temp_pe_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+drop table if exists temp_pe_staging_add;
+create temp table temp_pe_staging_add as
+select a.date_index, a.load_date
+, a.ts_20_s, a.at_20_s, a.ov_20_s, a.ss_20_s
+, b.ts_10_s, b.at_10_s, b.ov_10_s, b.ss_10_s
+, c.ts_05_s, c.at_05_s, c.ov_05_s, c.ss_05_s
+, d.ts_03_s, d.at_03_s, d.ov_03_s, d.ss_03_s
+from temp_pe_staging_add_20 a
+inner join temp_pe_staging_add_10 b on a.date_index = b.date_index and a.load_date = b.load_date
+inner join temp_pe_staging_add_05 c on b.date_index = c.date_index and a.load_date = c.load_date
+inner join temp_pe_staging_add_03 d on a.date_index = d.date_index and a.load_date = d.load_date;
+
+drop table if exists temp_volume_staging;
+create temporary table temp_volume_staging as
+select date_index, load_date
+, json_build_array(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19) as idx20
+, json_build_array(0,1,2,3,4,5,6,7,8,9) as idx10
+, json_build_array(0,1,2,3,4) as idx05
+, json_build_array(0,1,2) as idx03
+, (ts_00 + ts_01 + ts_02)/3 as avg_ts_03
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04)/5 as avg_ts_05
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04 + ts_05 + ts_06 + ts_07 + ts_08 + ts_09)/ 10 as avg_ts_10
+, (ts_00 + ts_01 + ts_02 + ts_03 + ts_04 + ts_05 + ts_06 + ts_07 + ts_08 + ts_09
+  +ts_10 + ts_11 + ts_12 + ts_13 + ts_14 + ts_15 + ts_16 + ts_17 + ts_18 + ts_19
+    )/20 as avg_ts_20
+, json_build_array(ts_02 , ts_01 , ts_00) as lst_ts_03
+, json_build_array(ts_04 , ts_03 , ts_02 , ts_01 , ts_00) as lst_ts_05
+, json_build_array(ts_09 , ts_08 , ts_07 , ts_06 , ts_05 , ts_04 , ts_03 , ts_02 , ts_01 , ts_00) as lst_ts_10
+, json_build_array(ts_19 , ts_18 , ts_17 , ts_16 , ts_15 , ts_14 , ts_13 , ts_12 , ts_11 , ts_10
+  , ts_09 , ts_08 , ts_07 , ts_06 , ts_05 , ts_04 , ts_03 , ts_02 , ts_01 , ts_00
+    ) as lst_ts_20
+, (ss_00 + ss_01 + ss_02)/3 as avg_ss_03
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04)/5 as avg_ss_05
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04 + ss_05 + ss_06 + ss_07 + ss_08 + ss_09)/ 10 as avg_ss_10
+, (ss_00 + ss_01 + ss_02 + ss_03 + ss_04 + ss_05 + ss_06 + ss_07 + ss_08 + ss_09
+  +ss_10 + ss_11 + ss_12 + ss_13 + ss_14 + ss_15 + ss_16 + ss_17 + ss_18 + ss_19
+    )/20 as avg_ss_20
+, json_build_array(ss_02 , ss_01 , ss_00) as lst_ss_03
+, json_build_array(ss_04 , ss_03 , ss_02 , ss_01 , ss_00) as lst_ss_05
+, json_build_array(ss_09 , ss_08 , ss_07 , ss_06 , ss_05 , ss_04 , ss_03 , ss_02 , ss_01 , ss_00) as lst_ss_10
+, json_build_array(ss_19 , ss_18 , ss_17 , ss_16 , ss_15 , ss_14 , ss_13 , ss_12 , ss_11 , ss_10
+  , ss_09 , ss_08 , ss_07 , ss_06 , ss_05 , ss_04 , ss_03 , ss_02 , ss_01 , ss_00
+    ) as lst_ss_20
+, (at_00 + at_01 + at_02)/3 as avg_at_03
+, (at_00 + at_01 + at_02 + at_03 + at_04)/5 as avg_at_05
+, (at_00 + at_01 + at_02 + at_03 + at_04 + at_05 + at_06 + at_07 + at_08 + at_09)/ 10 as avg_at_10
+, (at_00 + at_01 + at_02 + at_03 + at_04 + at_05 + at_06 + at_07 + at_08 + at_09
+  +at_10 + at_11 + at_12 + at_13 + at_14 + at_15 + at_16 + at_17 + at_18 + at_19
+    )/20 as avg_at_20
+, json_build_array(at_02 , at_01 , at_00) as lst_at_03
+, json_build_array(at_04 , at_03 , at_02 , at_01 , at_00) as lst_at_05
+, json_build_array(at_09 , at_08 , at_07 , at_06 , at_05 , at_04 , at_03 , at_02 , at_01 , at_00) as lst_at_10
+, json_build_array(at_19 , at_18 , at_17 , at_16 , at_15 , at_14 , at_13 , at_12 , at_11 , at_10
+  , at_09 , at_08 , at_07 , at_06 , at_05 , at_04 , at_03 , at_02 , at_01 , at_00
+    ) as lst_at_20
+, (ov_00 + ov_01 + ov_02)/3 as avg_ov_03
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04)/5 as avg_ov_05
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04 + ov_05 + ov_06 + ov_07 + ov_08 + ov_09)/ 10 as avg_ov_10
+, (ov_00 + ov_01 + ov_02 + ov_03 + ov_04 + ov_05 + ov_06 + ov_07 + ov_08 + ov_09
+  +ov_10 + ov_11 + ov_12 + ov_13 + ov_14 + ov_15 + ov_16 + ov_17 + ov_18 + ov_19
+    )/20 as avg_ov_20
+, json_build_array(ov_02 , ov_01 , ov_00) as lst_ov_03
+, json_build_array(ov_04 , ov_03 , ov_02 , ov_01 , ov_00) as lst_ov_05
+, json_build_array(ov_09 , ov_08 , ov_07 , ov_06 , ov_05 , ov_04 , ov_03 , ov_02 , ov_01 , ov_00) as lst_ov_10
+, json_build_array(ov_19 , ov_18 , ov_17 , ov_16 , ov_15 , ov_14 , ov_13 , ov_12 , ov_11 , ov_10
+  , ov_09 , ov_08 , ov_07 , ov_06 , ov_05 , ov_04 , ov_03 , ov_02 , ov_01 , ov_00
+    ) as lst_ov_20
+from (select  date_index, load_date
+, volume_trading_strength as ts_00
+, lag(volume_trading_strength, 01) over( order by date_index ) ts_01
+, lag(volume_trading_strength, 02) over( order by date_index ) ts_02
+, lag(volume_trading_strength, 03) over( order by date_index ) ts_03
+, lag(volume_trading_strength, 04) over( order by date_index ) ts_04
+, lag(volume_trading_strength, 05) over( order by date_index ) ts_05
+, lag(volume_trading_strength, 06) over( order by date_index ) ts_06
+, lag(volume_trading_strength, 07) over( order by date_index ) ts_07
+, lag(volume_trading_strength, 08) over( order by date_index ) ts_08
+, lag(volume_trading_strength, 09) over( order by date_index ) ts_09
+, lag(volume_trading_strength, 10) over( order by date_index ) ts_10
+, lag(volume_trading_strength, 11) over( order by date_index ) ts_11
+, lag(volume_trading_strength, 12) over( order by date_index ) ts_12
+, lag(volume_trading_strength, 13) over( order by date_index ) ts_13
+, lag(volume_trading_strength, 14) over( order by date_index ) ts_14
+, lag(volume_trading_strength, 15) over( order by date_index ) ts_15
+, lag(volume_trading_strength, 16) over( order by date_index ) ts_16
+, lag(volume_trading_strength, 17) over( order by date_index ) ts_17
+, lag(volume_trading_strength, 18) over( order by date_index ) ts_18
+, lag(volume_trading_strength, 19) over( order by date_index ) ts_19
+, volume_short_size as ss_00
+, lag(volume_short_size, 01) over( order by date_index ) ss_01
+, lag(volume_short_size, 02) over( order by date_index ) ss_02
+, lag(volume_short_size, 03) over( order by date_index ) ss_03
+, lag(volume_short_size, 04) over( order by date_index ) ss_04
+, lag(volume_short_size, 05) over( order by date_index ) ss_05
+, lag(volume_short_size, 06) over( order by date_index ) ss_06
+, lag(volume_short_size, 07) over( order by date_index ) ss_07
+, lag(volume_short_size, 08) over( order by date_index ) ss_08
+, lag(volume_short_size, 09) over( order by date_index ) ss_09
+, lag(volume_short_size, 10) over( order by date_index ) ss_10
+, lag(volume_short_size, 11) over( order by date_index ) ss_11
+, lag(volume_short_size, 12) over( order by date_index ) ss_12
+, lag(volume_short_size, 13) over( order by date_index ) ss_13
+, lag(volume_short_size, 14) over( order by date_index ) ss_14
+, lag(volume_short_size, 15) over( order by date_index ) ss_15
+, lag(volume_short_size, 16) over( order by date_index ) ss_16
+, lag(volume_short_size, 17) over( order by date_index ) ss_17
+, lag(volume_short_size, 18) over( order by date_index ) ss_18
+, lag(volume_short_size, 19) over( order by date_index ) ss_19
+, volume_active_ts as at_00
+, lag(volume_active_ts, 01) over( order by date_index ) at_01
+, lag(volume_active_ts, 02) over( order by date_index ) at_02
+, lag(volume_active_ts, 03) over( order by date_index ) at_03
+, lag(volume_active_ts, 04) over( order by date_index ) at_04
+, lag(volume_active_ts, 05) over( order by date_index ) at_05
+, lag(volume_active_ts, 06) over( order by date_index ) at_06
+, lag(volume_active_ts, 07) over( order by date_index ) at_07
+, lag(volume_active_ts, 08) over( order by date_index ) at_08
+, lag(volume_active_ts, 09) over( order by date_index ) at_09
+, lag(volume_active_ts, 10) over( order by date_index ) at_10
+, lag(volume_active_ts, 11) over( order by date_index ) at_11
+, lag(volume_active_ts, 12) over( order by date_index ) at_12
+, lag(volume_active_ts, 13) over( order by date_index ) at_13
+, lag(volume_active_ts, 14) over( order by date_index ) at_14
+, lag(volume_active_ts, 15) over( order by date_index ) at_15
+, lag(volume_active_ts, 16) over( order by date_index ) at_16
+, lag(volume_active_ts, 17) over( order by date_index ) at_17
+, lag(volume_active_ts, 18) over( order by date_index ) at_18
+, lag(volume_active_ts, 19) over( order by date_index ) at_19
+, volume_over_value as ov_00
+, lag(volume_over_value, 01) over( order by date_index ) ov_01
+, lag(volume_over_value, 02) over( order by date_index ) ov_02
+, lag(volume_over_value, 03) over( order by date_index ) ov_03
+, lag(volume_over_value, 04) over( order by date_index ) ov_04
+, lag(volume_over_value, 05) over( order by date_index ) ov_05
+, lag(volume_over_value, 06) over( order by date_index ) ov_06
+, lag(volume_over_value, 07) over( order by date_index ) ov_07
+, lag(volume_over_value, 08) over( order by date_index ) ov_08
+, lag(volume_over_value, 09) over( order by date_index ) ov_09
+, lag(volume_over_value, 10) over( order by date_index ) ov_10
+, lag(volume_over_value, 11) over( order by date_index ) ov_11
+, lag(volume_over_value, 12) over( order by date_index ) ov_12
+, lag(volume_over_value, 13) over( order by date_index ) ov_13
+, lag(volume_over_value, 14) over( order by date_index ) ov_14
+, lag(volume_over_value, 15) over( order by date_index ) ov_15
+, lag(volume_over_value, 16) over( order by date_index ) ov_16
+, lag(volume_over_value, 17) over( order by date_index ) ov_17
+, lag(volume_over_value, 18) over( order by date_index ) ov_18
+, lag(volume_over_value, 19) over( order by date_index ) ov_19
+from temp_global_indicator ) temp ;
+
+
+drop table if exists temp_volume_staging_add_20;
+create temporary table temp_volume_staging_add_20 as
+select date_index, load_date
+,   regr_slope(lst_ts_20,idx20) as ts_20_s, regr_intercept(lst_ts_20,idx20) as ts_20_i
+,   regr_slope(lst_at_20,idx20) as at_20_s, regr_intercept(lst_at_20,idx20) as at_20_i
+,   regr_slope(lst_ov_20,idx20) as ov_20_s, regr_intercept(lst_ov_20,idx20) as ov_20_i
+,   regr_slope(lst_ss_20,idx20) as ss_20_s, regr_intercept(lst_ss_20,idx20) as ss_20_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx20) as decimal(32,7))          as idx20
+,     cast(json_array_elements_text(lst_ts_20) as decimal(32,7))      as lst_ts_20
+,     cast(json_array_elements_text(lst_at_20) as decimal(32,7))      as lst_at_20
+,     cast(json_array_elements_text(lst_ov_20) as decimal(32,7))      as lst_ov_20
+,     cast(json_array_elements_text(lst_ss_20) as decimal(32,7))      as lst_ss_20
+from temp_volume_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+
+drop table if exists temp_volume_staging_add_10;
+create temporary table temp_volume_staging_add_10 as
+select date_index, load_date
+,   regr_slope(lst_ts_10,idx10) as ts_10_s, regr_intercept(lst_ts_10,idx10) as ts_10_i
+,   regr_slope(lst_at_10,idx10) as at_10_s, regr_intercept(lst_at_10,idx10) as at_10_i
+,   regr_slope(lst_ov_10,idx10) as ov_10_s, regr_intercept(lst_ov_10,idx10) as ov_10_i
+,   regr_slope(lst_ss_10,idx10) as ss_10_s, regr_intercept(lst_ss_10,idx10) as ss_10_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx10) as decimal(32,7))          as idx10
+,     cast(json_array_elements_text(lst_ts_10) as decimal(32,7))      as lst_ts_10
+,     cast(json_array_elements_text(lst_at_10) as decimal(32,7))      as lst_at_10
+,     cast(json_array_elements_text(lst_ov_10) as decimal(32,7))      as lst_ov_10
+,     cast(json_array_elements_text(lst_ss_10) as decimal(32,7))      as lst_ss_10
+from temp_volume_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+drop table if exists temp_volume_staging_add_05;
+create temporary table temp_volume_staging_add_05 as
+select date_index, load_date
+,   regr_slope(lst_ts_05,idx05) as ts_05_s, regr_intercept(lst_ts_05,idx05) as ts_05_i
+,   regr_slope(lst_at_05,idx05) as at_05_s, regr_intercept(lst_at_05,idx05) as at_05_i
+,   regr_slope(lst_ov_05,idx05) as ov_05_s, regr_intercept(lst_ov_05,idx05) as ov_05_i
+,   regr_slope(lst_ss_05,idx05) as ss_05_s, regr_intercept(lst_ss_05,idx05) as ss_05_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx05) as decimal(32,7))          as idx05
+,     cast(json_array_elements_text(lst_ts_05) as decimal(32,7))      as lst_ts_05
+,     cast(json_array_elements_text(lst_at_05) as decimal(32,7))      as lst_at_05
+,     cast(json_array_elements_text(lst_ov_05) as decimal(32,7))      as lst_ov_05
+,     cast(json_array_elements_text(lst_ss_05) as decimal(32,7))      as lst_ss_05
+from temp_volume_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+drop table if exists temp_volume_staging_add_03;
+create temporary table temp_volume_staging_add_03 as
+select date_index, load_date
+,   regr_slope(lst_ts_03,idx03) as ts_03_s, regr_intercept(lst_ts_03,idx03) as ts_03_i
+,   regr_slope(lst_at_03,idx03) as at_03_s, regr_intercept(lst_at_03,idx03) as at_03_i
+,   regr_slope(lst_ov_03,idx03) as ov_03_s, regr_intercept(lst_ov_03,idx03) as ov_03_i
+,   regr_slope(lst_ss_03,idx03) as ss_03_s, regr_intercept(lst_ss_03,idx03) as ss_03_i
+from (
+select date_index, load_date
+,     cast(json_array_elements_text(idx03) as decimal(32,7))          as idx03
+,     cast(json_array_elements_text(lst_ts_03) as decimal(32,7))      as lst_ts_03
+,     cast(json_array_elements_text(lst_at_03) as decimal(32,7))      as lst_at_03
+,     cast(json_array_elements_text(lst_ov_03) as decimal(32,7))      as lst_ov_03
+,     cast(json_array_elements_text(lst_ss_03) as decimal(32,7))      as lst_ss_03
+from temp_volume_staging where (date_index >=  20  and date_index <= 999) or date_index >= 1020
+    ) t  group by date_index, load_date ;
+
+
+drop table if exists temp_volume_staging_add;
+create temp table temp_volume_staging_add as
+select a.date_index, a.load_date
+, a.ts_20_s, a.at_20_s, a.ov_20_s, a.ss_20_s
+, b.ts_10_s, b.at_10_s, b.ov_10_s, b.ss_10_s
+, c.ts_05_s, c.at_05_s, c.ov_05_s, c.ss_05_s
+, d.ts_03_s, d.at_03_s, d.ov_03_s, d.ss_03_s
+from temp_volume_staging_add_20 a
+inner join temp_volume_staging_add_10 b on a.date_index = b.date_index and a.load_date = b.load_date
+inner join temp_volume_staging_add_05 c on b.date_index = c.date_index and a.load_date = c.load_date
+inner join temp_volume_staging_add_03 d on a.date_index = d.date_index and a.load_date = d.load_date;
+
+
+drop table if exists temp_full_staging_scale;
+create temp table temp_full_staging_scale as
+select 1
+,	min(ts_20_s) as min_ts_20_s,	avg(ts_20_s) as avg_ts_20_s
+,	min(at_20_s) as min_at_20_s,	avg(at_20_s) as avg_at_20_s
+,	min(ov_20_s) as min_ov_20_s,	avg(ov_20_s) as avg_ov_20_s
+,	min(ss_20_s) as min_ss_20_s,	avg(ss_20_s) as avg_ss_20_s
+
+,	min(ts_10_s) as min_ts_10_s,	avg(ts_10_s) as avg_ts_10_s
+,	min(at_10_s) as min_at_10_s,	avg(at_10_s) as avg_at_10_s
+,	min(ov_10_s) as min_ov_10_s,	avg(ov_10_s) as avg_ov_10_s
+,	min(ss_10_s) as min_ss_10_s,	avg(ss_10_s) as avg_ss_10_s
+
+,	min(ts_05_s) as min_ts_05_s,	avg(ts_05_s) as avg_ts_05_s
+,	min(at_05_s) as min_at_05_s,	avg(at_05_s) as avg_at_05_s
+,	min(ov_05_s) as min_ov_05_s,	avg(ov_05_s) as avg_ov_05_s
+,	min(ss_05_s) as min_ss_05_s,	avg(ss_05_s) as avg_ss_05_s
+
+,	min(ts_03_s) as min_ts_03_s,	avg(ts_03_s) as avg_ts_03_s
+,	min(at_03_s) as min_at_03_s,	avg(at_03_s) as avg_at_03_s
+,	min(ov_03_s) as min_ov_03_s,	avg(ov_03_s) as avg_ov_03_s
+,	min(ss_03_s) as min_ss_03_s,	avg(ss_03_s) as avg_ss_03_s
+from temp_full_staging_add;
+
+drop table if exists temp_pe_staging_scale;
+create temp table temp_pe_staging_scale as
+select 1
+,	min(ts_20_s) as min_ts_20_s,	avg(ts_20_s) as avg_ts_20_s
+,	min(at_20_s) as min_at_20_s,	avg(at_20_s) as avg_at_20_s
+,	min(ov_20_s) as min_ov_20_s,	avg(ov_20_s) as avg_ov_20_s
+,	min(ss_20_s) as min_ss_20_s,	avg(ss_20_s) as avg_ss_20_s
+
+,	min(ts_10_s) as min_ts_10_s,	avg(ts_10_s) as avg_ts_10_s
+,	min(at_10_s) as min_at_10_s,	avg(at_10_s) as avg_at_10_s
+,	min(ov_10_s) as min_ov_10_s,	avg(ov_10_s) as avg_ov_10_s
+,	min(ss_10_s) as min_ss_10_s,	avg(ss_10_s) as avg_ss_10_s
+
+,	min(ts_05_s) as min_ts_05_s,	avg(ts_05_s) as avg_ts_05_s
+,	min(at_05_s) as min_at_05_s,	avg(at_05_s) as avg_at_05_s
+,	min(ov_05_s) as min_ov_05_s,	avg(ov_05_s) as avg_ov_05_s
+,	min(ss_05_s) as min_ss_05_s,	avg(ss_05_s) as avg_ss_05_s
+
+,	min(ts_03_s) as min_ts_03_s,	avg(ts_03_s) as avg_ts_03_s
+,	min(at_03_s) as min_at_03_s,	avg(at_03_s) as avg_at_03_s
+,	min(ov_03_s) as min_ov_03_s,	avg(ov_03_s) as avg_ov_03_s
+,	min(ss_03_s) as min_ss_03_s,	avg(ss_03_s) as avg_ss_03_s
+from temp_pe_staging_add;
+
+
+drop table if exists temp_volume_staging_scale;
+create temp table temp_volume_staging_scale as
+select 1
+,	min(ts_20_s) as min_ts_20_s,	avg(ts_20_s) as avg_ts_20_s
+,	min(at_20_s) as min_at_20_s,	avg(at_20_s) as avg_at_20_s
+,	min(ov_20_s) as min_ov_20_s,	avg(ov_20_s) as avg_ov_20_s
+,	min(ss_20_s) as min_ss_20_s,	avg(ss_20_s) as avg_ss_20_s
+
+,	min(ts_10_s) as min_ts_10_s,	avg(ts_10_s) as avg_ts_10_s
+,	min(at_10_s) as min_at_10_s,	avg(at_10_s) as avg_at_10_s
+,	min(ov_10_s) as min_ov_10_s,	avg(ov_10_s) as avg_ov_10_s
+,	min(ss_10_s) as min_ss_10_s,	avg(ss_10_s) as avg_ss_10_s
+
+,	min(ts_05_s) as min_ts_05_s,	avg(ts_05_s) as avg_ts_05_s
+,	min(at_05_s) as min_at_05_s,	avg(at_05_s) as avg_at_05_s
+,	min(ov_05_s) as min_ov_05_s,	avg(ov_05_s) as avg_ov_05_s
+,	min(ss_05_s) as min_ss_05_s,	avg(ss_05_s) as avg_ss_05_s
+
+,	min(ts_03_s) as min_ts_03_s,	avg(ts_03_s) as avg_ts_03_s
+,	min(at_03_s) as min_at_03_s,	avg(at_03_s) as avg_at_03_s
+,	min(ov_03_s) as min_ov_03_s,	avg(ov_03_s) as avg_ov_03_s
+,	min(ss_03_s) as min_ss_03_s,	avg(ss_03_s) as avg_ss_03_s
+
+from temp_volume_staging_add;
+
+drop table if exists temp_full_merge;
+create temp table temp_full_merge as
+select m.date_index, m.load_date
+,   m.avg_ts_03,   m.avg_ts_05,   m.avg_ts_10,   m.avg_ts_20
+,   m.avg_at_03,   m.avg_at_05,   m.avg_at_10,   m.avg_at_20
+,   m.avg_ov_03,   m.avg_ov_05,   m.avg_ov_10,   m.avg_ov_20
+,   m.avg_ss_03,   m.avg_ss_05,   m.avg_ss_10,   m.avg_ss_20
+,   (a.ts_20_s - s.min_ts_20_s) / (s.avg_ts_20_s - s.min_ts_20_s) as ts_20_s
+,   (a.at_20_s - s.min_at_20_s) / (s.avg_at_20_s - s.min_at_20_s) as at_20_s
+,   (a.ov_20_s - s.min_ov_20_s) / (s.avg_ov_20_s - s.min_ov_20_s) as ov_20_s
+,   (a.ss_20_s - s.min_ss_20_s) / (s.avg_ss_20_s - s.min_ss_20_s) as ss_20_s
+
+,   (a.ts_10_s - s.min_ts_10_s) / (s.avg_ts_10_s - s.min_ts_10_s) as ts_10_s
+,   (a.at_10_s - s.min_at_10_s) / (s.avg_at_10_s - s.min_at_10_s) as at_10_s
+,   (a.ov_10_s - s.min_ov_10_s) / (s.avg_ov_10_s - s.min_ov_10_s) as ov_10_s
+,   (a.ss_10_s - s.min_ss_10_s) / (s.avg_ss_10_s - s.min_ss_10_s) as ss_10_s
+
+,   (a.ts_05_s - s.min_ts_05_s) / (s.avg_ts_05_s - s.min_ts_05_s) as ts_05_s
+,   (a.at_05_s - s.min_at_05_s) / (s.avg_at_05_s - s.min_at_05_s) as at_05_s
+,   (a.ov_05_s - s.min_ov_05_s) / (s.avg_ov_05_s - s.min_ov_05_s) as ov_05_s
+,   (a.ss_05_s - s.min_ss_05_s) / (s.avg_ss_05_s - s.min_ss_05_s) as ss_05_s
+
+,   (a.ts_03_s - s.min_ts_03_s) / (s.avg_ts_03_s - s.min_ts_03_s) as ts_03_s
+,   (a.at_03_s - s.min_at_03_s) / (s.avg_at_03_s - s.min_at_03_s) as at_03_s
+,   (a.ov_03_s - s.min_ov_03_s) / (s.avg_ov_03_s - s.min_ov_03_s) as ov_03_s
+,   (a.ss_03_s - s.min_ss_03_s) / (s.avg_ss_03_s - s.min_ss_03_s) as ss_03_s
+from
+    temp_full_staging m
+        inner join
+    temp_full_staging_add a
+        on m.date_index = a.date_index and m.load_date = a.load_date
+        cross join
+    temp_full_staging_scale s;
+
+drop table if exists temp_pe_merge;
+create temp table temp_pe_merge as
+select m.date_index, m.load_date
+,   m.avg_ts_03,   m.avg_ts_05,   m.avg_ts_10,   m.avg_ts_20
+,   m.avg_at_03,   m.avg_at_05,   m.avg_at_10,   m.avg_at_20
+,   m.avg_ov_03,   m.avg_ov_05,   m.avg_ov_10,   m.avg_ov_20
+,   m.avg_ss_03,   m.avg_ss_05,   m.avg_ss_10,   m.avg_ss_20
+,   (a.ts_20_s - s.min_ts_20_s) / (s.avg_ts_20_s - s.min_ts_20_s) as ts_20_s
+,   (a.at_20_s - s.min_at_20_s) / (s.avg_at_20_s - s.min_at_20_s) as at_20_s
+,   (a.ov_20_s - s.min_ov_20_s) / (s.avg_ov_20_s - s.min_ov_20_s) as ov_20_s
+,   (a.ss_20_s - s.min_ss_20_s) / (s.avg_ss_20_s - s.min_ss_20_s) as ss_20_s
+
+,   (a.ts_10_s - s.min_ts_10_s) / (s.avg_ts_10_s - s.min_ts_10_s) as ts_10_s
+,   (a.at_10_s - s.min_at_10_s) / (s.avg_at_10_s - s.min_at_10_s) as at_10_s
+,   (a.ov_10_s - s.min_ov_10_s) / (s.avg_ov_10_s - s.min_ov_10_s) as ov_10_s
+,   (a.ss_10_s - s.min_ss_10_s) / (s.avg_ss_10_s - s.min_ss_10_s) as ss_10_s
+
+,   (a.ts_05_s - s.min_ts_05_s) / (s.avg_ts_05_s - s.min_ts_05_s) as ts_05_s
+,   (a.at_05_s - s.min_at_05_s) / (s.avg_at_05_s - s.min_at_05_s) as at_05_s
+,   (a.ov_05_s - s.min_ov_05_s) / (s.avg_ov_05_s - s.min_ov_05_s) as ov_05_s
+,   (a.ss_05_s - s.min_ss_05_s) / (s.avg_ss_05_s - s.min_ss_05_s) as ss_05_s
+
+,   (a.ts_03_s - s.min_ts_03_s) / (s.avg_ts_03_s - s.min_ts_03_s) as ts_03_s
+,   (a.at_03_s - s.min_at_03_s) / (s.avg_at_03_s - s.min_at_03_s) as at_03_s
+,   (a.ov_03_s - s.min_ov_03_s) / (s.avg_ov_03_s - s.min_ov_03_s) as ov_03_s
+,   (a.ss_03_s - s.min_ss_03_s) / (s.avg_ss_03_s - s.min_ss_03_s) as ss_03_s
+from
+    temp_pe_staging m
+        inner join
+    temp_pe_staging_add a
+        on m.date_index = a.date_index and m.load_date = a.load_date
+        cross join
+    temp_pe_staging_scale s;
+
+drop table if exists temp_volume_merge;
+create temp table temp_volume_merge as
+select m.date_index, m.load_date
+,   m.avg_ts_03,   m.avg_ts_05,   m.avg_ts_10,   m.avg_ts_20
+,   m.avg_at_03,   m.avg_at_05,   m.avg_at_10,   m.avg_at_20
+,   m.avg_ov_03,   m.avg_ov_05,   m.avg_ov_10,   m.avg_ov_20
+,   m.avg_ss_03,   m.avg_ss_05,   m.avg_ss_10,   m.avg_ss_20
+,   (a.ts_20_s - s.min_ts_20_s) / (s.avg_ts_20_s - s.min_ts_20_s) as ts_20_s
+,   (a.at_20_s - s.min_at_20_s) / (s.avg_at_20_s - s.min_at_20_s) as at_20_s
+,   (a.ov_20_s - s.min_ov_20_s) / (s.avg_ov_20_s - s.min_ov_20_s) as ov_20_s
+,   (a.ss_20_s - s.min_ss_20_s) / (s.avg_ss_20_s - s.min_ss_20_s) as ss_20_s
+
+,   (a.ts_10_s - s.min_ts_10_s) / (s.avg_ts_10_s - s.min_ts_10_s) as ts_10_s
+,   (a.at_10_s - s.min_at_10_s) / (s.avg_at_10_s - s.min_at_10_s) as at_10_s
+,   (a.ov_10_s - s.min_ov_10_s) / (s.avg_ov_10_s - s.min_ov_10_s) as ov_10_s
+,   (a.ss_10_s - s.min_ss_10_s) / (s.avg_ss_10_s - s.min_ss_10_s) as ss_10_s
+
+,   (a.ts_05_s - s.min_ts_05_s) / (s.avg_ts_05_s - s.min_ts_05_s) as ts_05_s
+,   (a.at_05_s - s.min_at_05_s) / (s.avg_at_05_s - s.min_at_05_s) as at_05_s
+,   (a.ov_05_s - s.min_ov_05_s) / (s.avg_ov_05_s - s.min_ov_05_s) as ov_05_s
+,   (a.ss_05_s - s.min_ss_05_s) / (s.avg_ss_05_s - s.min_ss_05_s) as ss_05_s
+
+,   (a.ts_03_s - s.min_ts_03_s) / (s.avg_ts_03_s - s.min_ts_03_s) as ts_03_s
+,   (a.at_03_s - s.min_at_03_s) / (s.avg_at_03_s - s.min_at_03_s) as at_03_s
+,   (a.ov_03_s - s.min_ov_03_s) / (s.avg_ov_03_s - s.min_ov_03_s) as ov_03_s
+,   (a.ss_03_s - s.min_ss_03_s) / (s.avg_ss_03_s - s.min_ss_03_s) as ss_03_s
+from
+    temp_volume_staging m
+        inner join
+    temp_volume_staging_add a
+        on m.date_index = a.date_index and m.load_date = a.load_date
+        cross join
+    temp_volume_staging_scale s;
+
+drop table if exists final_global;
+create temp table final_global as
+select f.date_index, f.load_date
+,   cast((1/(1+EXP(0-f.avg_ts_03)))*2-1 as decimal(5,3)) as f_a_ts_03
+,   cast((1/(1+EXP(0-f.avg_ts_05)))*2-1 as decimal(5,3)) as f_a_ts_05
+,   cast((1/(1+EXP(0-f.avg_ts_10)))*2-1 as decimal(5,3)) as f_a_ts_10
+,   cast((1/(1+EXP(0-f.avg_ts_20)))*2-1 as decimal(5,3)) as f_a_ts_20
+,   cast((1/(1+EXP(0-f.avg_at_03)))*2-1 as decimal(5,3)) as f_a_at_03
+,   cast((1/(1+EXP(0-f.avg_at_05)))*2-1 as decimal(5,3)) as f_a_at_05
+,   cast((1/(1+EXP(0-f.avg_at_10)))*2-1 as decimal(5,3)) as f_a_at_10
+,   cast((1/(1+EXP(0-f.avg_at_20)))*2-1 as decimal(5,3)) as f_a_at_20
+,   cast((1/(1+EXP(0-f.avg_ov_03)))*2-1 as decimal(5,3)) as f_a_ov_03
+,   cast((1/(1+EXP(0-f.avg_ov_05)))*2-1 as decimal(5,3)) as f_a_ov_05
+,   cast((1/(1+EXP(0-f.avg_ov_10)))*2-1 as decimal(5,3)) as f_a_ov_10
+,   cast((1/(1+EXP(0-f.avg_ov_20)))*2-1 as decimal(5,3)) as f_a_ov_20
+,   cast((1/(1+EXP(0-f.avg_ss_03)))*2-1 as decimal(5,3)) as f_a_ss_03
+,   cast((1/(1+EXP(0-f.avg_ss_05)))*2-1 as decimal(5,3)) as f_a_ss_05
+,   cast((1/(1+EXP(0-f.avg_ss_10)))*2-1 as decimal(5,3)) as f_a_ss_10
+,   cast((1/(1+EXP(0-f.avg_ss_20)))*2-1 as decimal(5,3)) as f_a_ss_20
+
+,   cast((1/(1+EXP(0-p.avg_ts_03)))*2-1 as decimal(5,3)) as p_a_ts_03
+,   cast((1/(1+EXP(0-p.avg_ts_05)))*2-1 as decimal(5,3)) as p_a_ts_05
+,   cast((1/(1+EXP(0-p.avg_ts_10)))*2-1 as decimal(5,3)) as p_a_ts_10
+,   cast((1/(1+EXP(0-p.avg_ts_20)))*2-1 as decimal(5,3)) as p_a_ts_20
+,   cast((1/(1+EXP(0-p.avg_at_03)))*2-1 as decimal(5,3)) as p_a_at_03
+,   cast((1/(1+EXP(0-p.avg_at_05)))*2-1 as decimal(5,3)) as p_a_at_05
+,   cast((1/(1+EXP(0-p.avg_at_10)))*2-1 as decimal(5,3)) as p_a_at_10
+,   cast((1/(1+EXP(0-p.avg_at_20)))*2-1 as decimal(5,3)) as p_a_at_20
+,   cast((1/(1+EXP(0-p.avg_ov_03)))*2-1 as decimal(5,3)) as p_a_ov_03
+,   cast((1/(1+EXP(0-p.avg_ov_05)))*2-1 as decimal(5,3)) as p_a_ov_05
+,   cast((1/(1+EXP(0-p.avg_ov_10)))*2-1 as decimal(5,3)) as p_a_ov_10
+,   cast((1/(1+EXP(0-p.avg_ov_20)))*2-1 as decimal(5,3)) as p_a_ov_20
+,   cast((1/(1+EXP(0-p.avg_ss_03)))*2-1 as decimal(5,3)) as p_a_ss_03
+,   cast((1/(1+EXP(0-p.avg_ss_05)))*2-1 as decimal(5,3)) as p_a_ss_05
+,   cast((1/(1+EXP(0-p.avg_ss_10)))*2-1 as decimal(5,3)) as p_a_ss_10
+,   cast((1/(1+EXP(0-p.avg_ss_20)))*2-1 as decimal(5,3)) as p_a_ss_20
+
+,   cast((1/(1+EXP(0-v.avg_ts_03)))*2-1 as decimal(5,3)) as v_a_ts_03
+,   cast((1/(1+EXP(0-v.avg_ts_05)))*2-1 as decimal(5,3)) as v_a_ts_05
+,   cast((1/(1+EXP(0-v.avg_ts_10)))*2-1 as decimal(5,3)) as v_a_ts_10
+,   cast((1/(1+EXP(0-v.avg_ts_20)))*2-1 as decimal(5,3)) as v_a_ts_20
+,   cast((1/(1+EXP(0-v.avg_at_03)))*2-1 as decimal(5,3)) as v_a_at_03
+,   cast((1/(1+EXP(0-v.avg_at_05)))*2-1 as decimal(5,3)) as v_a_at_05
+,   cast((1/(1+EXP(0-v.avg_at_10)))*2-1 as decimal(5,3)) as v_a_at_10
+,   cast((1/(1+EXP(0-v.avg_at_20)))*2-1 as decimal(5,3)) as v_a_at_20
+,   cast((1/(1+EXP(0-v.avg_ov_03)))*2-1 as decimal(5,3)) as v_a_ov_03
+,   cast((1/(1+EXP(0-v.avg_ov_05)))*2-1 as decimal(5,3)) as v_a_ov_05
+,   cast((1/(1+EXP(0-v.avg_ov_10)))*2-1 as decimal(5,3)) as v_a_ov_10
+,   cast((1/(1+EXP(0-v.avg_ov_20)))*2-1 as decimal(5,3)) as v_a_ov_20
+,   cast((1/(1+EXP(0-v.avg_ss_03)))*2-1 as decimal(5,3)) as v_a_ss_03
+,   cast((1/(1+EXP(0-v.avg_ss_05)))*2-1 as decimal(5,3)) as v_a_ss_05
+,   cast((1/(1+EXP(0-v.avg_ss_10)))*2-1 as decimal(5,3)) as v_a_ss_10
+,   cast((1/(1+EXP(0-v.avg_ss_20)))*2-1 as decimal(5,3)) as v_a_ss_20
+
+,   cast((1/(1+EXP(0-f.ts_20_s)))*2-1 as decimal(5,3)) as f_s_ts_20
+,   cast((1/(1+EXP(0-f.at_20_s)))*2-1 as decimal(5,3)) as f_s_at_20
+,   cast((1/(1+EXP(0-f.ov_20_s)))*2-1 as decimal(5,3)) as f_s_ov_20
+,   cast((1/(1+EXP(0-f.ss_20_s)))*2-1 as decimal(5,3)) as f_s_ss_20
+,   cast((1/(1+EXP(0-f.ts_10_s)))*2-1 as decimal(5,3)) as f_s_ts_10
+,   cast((1/(1+EXP(0-f.at_10_s)))*2-1 as decimal(5,3)) as f_s_at_10
+,   cast((1/(1+EXP(0-f.ov_10_s)))*2-1 as decimal(5,3)) as f_s_ov_10
+,   cast((1/(1+EXP(0-f.ss_10_s)))*2-1 as decimal(5,3)) as f_s_ss_10
+,   cast((1/(1+EXP(0-f.ts_05_s)))*2-1 as decimal(5,3)) as f_s_ts_05
+,   cast((1/(1+EXP(0-f.at_05_s)))*2-1 as decimal(5,3)) as f_s_at_05
+,   cast((1/(1+EXP(0-f.ov_05_s)))*2-1 as decimal(5,3)) as f_s_ov_05
+,   cast((1/(1+EXP(0-f.ss_05_s)))*2-1 as decimal(5,3)) as f_s_ss_05
+,   cast((1/(1+EXP(0-f.ts_03_s)))*2-1 as decimal(5,3)) as f_s_ts_03
+,   cast((1/(1+EXP(0-f.at_03_s)))*2-1 as decimal(5,3)) as f_s_at_03
+,   cast((1/(1+EXP(0-f.ov_03_s)))*2-1 as decimal(5,3)) as f_s_ov_03
+,   cast((1/(1+EXP(0-f.ss_03_s)))*2-1 as decimal(5,3)) as f_s_ss_03
+
+,   cast((1/(1+EXP(0-p.ts_20_s)))*2-1 as decimal(5,3)) as p_s_ts_20
+,   cast((1/(1+EXP(0-p.at_20_s)))*2-1 as decimal(5,3)) as p_s_at_20
+,   cast((1/(1+EXP(0-p.ov_20_s)))*2-1 as decimal(5,3)) as p_s_ov_20
+,   cast((1/(1+EXP(0-p.ss_20_s)))*2-1 as decimal(5,3)) as p_s_ss_20
+,   cast((1/(1+EXP(0-p.ts_10_s)))*2-1 as decimal(5,3)) as p_s_ts_10
+,   cast((1/(1+EXP(0-p.at_10_s)))*2-1 as decimal(5,3)) as p_s_at_10
+,   cast((1/(1+EXP(0-p.ov_10_s)))*2-1 as decimal(5,3)) as p_s_ov_10
+,   cast((1/(1+EXP(0-p.ss_10_s)))*2-1 as decimal(5,3)) as p_s_ss_10
+,   cast((1/(1+EXP(0-p.ts_05_s)))*2-1 as decimal(5,3)) as p_s_ts_05
+,   cast((1/(1+EXP(0-p.at_05_s)))*2-1 as decimal(5,3)) as p_s_at_05
+,   cast((1/(1+EXP(0-p.ov_05_s)))*2-1 as decimal(5,3)) as p_s_ov_05
+,   cast((1/(1+EXP(0-p.ss_05_s)))*2-1 as decimal(5,3)) as p_s_ss_05
+,   cast((1/(1+EXP(0-p.ts_03_s)))*2-1 as decimal(5,3)) as p_s_ts_03
+,   cast((1/(1+EXP(0-p.at_03_s)))*2-1 as decimal(5,3)) as p_s_at_03
+,   cast((1/(1+EXP(0-p.ov_03_s)))*2-1 as decimal(5,3)) as p_s_ov_03
+,   cast((1/(1+EXP(0-p.ss_03_s)))*2-1 as decimal(5,3)) as p_s_ss_03
+
+,   cast((1/(1+EXP(0-v.ts_20_s)))*2-1 as decimal(5,3)) as v_s_ts_20
+,   cast((1/(1+EXP(0-v.at_20_s)))*2-1 as decimal(5,3)) as v_s_at_20
+,   cast((1/(1+EXP(0-v.ov_20_s)))*2-1 as decimal(5,3)) as v_s_ov_20
+,   cast((1/(1+EXP(0-v.ss_20_s)))*2-1 as decimal(5,3)) as v_s_ss_20
+,   cast((1/(1+EXP(0-v.ts_10_s)))*2-1 as decimal(5,3)) as v_s_ts_10
+,   cast((1/(1+EXP(0-v.at_10_s)))*2-1 as decimal(5,3)) as v_s_at_10
+,   cast((1/(1+EXP(0-v.ov_10_s)))*2-1 as decimal(5,3)) as v_s_ov_10
+,   cast((1/(1+EXP(0-v.ss_10_s)))*2-1 as decimal(5,3)) as v_s_ss_10
+,   cast((1/(1+EXP(0-v.ts_05_s)))*2-1 as decimal(5,3)) as v_s_ts_05
+,   cast((1/(1+EXP(0-v.at_05_s)))*2-1 as decimal(5,3)) as v_s_at_05
+,   cast((1/(1+EXP(0-v.ov_05_s)))*2-1 as decimal(5,3)) as v_s_ov_05
+,   cast((1/(1+EXP(0-v.ss_05_s)))*2-1 as decimal(5,3)) as v_s_ss_05
+,   cast((1/(1+EXP(0-v.ts_03_s)))*2-1 as decimal(5,3)) as v_s_ts_03
+,   cast((1/(1+EXP(0-v.at_03_s)))*2-1 as decimal(5,3)) as v_s_at_03
+,   cast((1/(1+EXP(0-v.ov_03_s)))*2-1 as decimal(5,3)) as v_s_ov_03
+,   cast((1/(1+EXP(0-v.ss_03_s)))*2-1 as decimal(5,3)) as v_s_ss_03
+
+,	cast((1/(1+EXP(0-f.avg_ts_05 / f.avg_ts_03)))*2-1 as decimal(5,3)) as devided_f_avg_ts_05_03
+,	cast((1/(1+EXP(0-f.avg_ts_10 / f.avg_ts_05)))*2-1 as decimal(5,3)) as devided_f_avg_ts_10_05
+,	cast((1/(1+EXP(0-f.avg_ts_10 / f.avg_ts_03)))*2-1 as decimal(5,3)) as devided_f_avg_ts_10_03
+,	cast((1/(1+EXP(0-f.avg_ts_20 / f.avg_ts_10)))*2-1 as decimal(5,3)) as devided_f_avg_ts_20_10
+,	cast((1/(1+EXP(0-f.avg_ts_20 / f.avg_ts_05)))*2-1 as decimal(5,3)) as devided_f_avg_ts_20_05
+,	cast((1/(1+EXP(0-f.avg_ts_20 / f.avg_ts_03)))*2-1 as decimal(5,3)) as devided_f_avg_ts_20_03
+,	cast((1/(1+EXP(0-f.avg_at_05 / f.avg_at_03)))*2-1 as decimal(5,3)) as devided_f_avg_at_05_03
+,	cast((1/(1+EXP(0-f.avg_at_10 / f.avg_at_05)))*2-1 as decimal(5,3)) as devided_f_avg_at_10_05
+,	cast((1/(1+EXP(0-f.avg_at_10 / f.avg_at_03)))*2-1 as decimal(5,3)) as devided_f_avg_at_10_03
+,	cast((1/(1+EXP(0-f.avg_at_20 / f.avg_at_10)))*2-1 as decimal(5,3)) as devided_f_avg_at_20_10
+,	cast((1/(1+EXP(0-f.avg_at_20 / f.avg_at_05)))*2-1 as decimal(5,3)) as devided_f_avg_at_20_05
+,	cast((1/(1+EXP(0-f.avg_at_20 / f.avg_at_03)))*2-1 as decimal(5,3)) as devided_f_avg_at_20_03
+,	cast((1/(1+EXP(0-f.avg_ov_05 / f.avg_ov_03)))*2-1 as decimal(5,3)) as devided_f_avg_ov_05_03
+,	cast((1/(1+EXP(0-f.avg_ov_10 / f.avg_ov_05)))*2-1 as decimal(5,3)) as devided_f_avg_ov_10_05
+,	cast((1/(1+EXP(0-f.avg_ov_10 / f.avg_ov_03)))*2-1 as decimal(5,3)) as devided_f_avg_ov_10_03
+,	cast((1/(1+EXP(0-f.avg_ov_20 / f.avg_ov_10)))*2-1 as decimal(5,3)) as devided_f_avg_ov_20_10
+,	cast((1/(1+EXP(0-f.avg_ov_20 / f.avg_ov_05)))*2-1 as decimal(5,3)) as devided_f_avg_ov_20_05
+,	cast((1/(1+EXP(0-f.avg_ov_20 / f.avg_ov_03)))*2-1 as decimal(5,3)) as devided_f_avg_ov_20_03
+,	cast((1/(1+EXP(0-f.avg_ss_05 / f.avg_ss_03)))*2-1 as decimal(5,3)) as devided_f_avg_ss_05_03
+,	cast((1/(1+EXP(0-f.avg_ss_10 / f.avg_ss_05)))*2-1 as decimal(5,3)) as devided_f_avg_ss_10_05
+,	cast((1/(1+EXP(0-f.avg_ss_10 / f.avg_ss_03)))*2-1 as decimal(5,3)) as devided_f_avg_ss_10_03
+,	cast((1/(1+EXP(0-f.avg_ss_20 / f.avg_ss_10)))*2-1 as decimal(5,3)) as devided_f_avg_ss_20_10
+,	cast((1/(1+EXP(0-f.avg_ss_20 / f.avg_ss_05)))*2-1 as decimal(5,3)) as devided_f_avg_ss_20_05
+,	cast((1/(1+EXP(0-f.avg_ss_20 / f.avg_ss_03)))*2-1 as decimal(5,3)) as devided_f_avg_ss_20_03
+
+,	cast((1/(1+EXP(0-p.avg_ts_05 / p.avg_ts_03)))*2-1 as decimal(5,3)) as devided_p_avg_ts_05_03
+,	cast((1/(1+EXP(0-p.avg_ts_10 / p.avg_ts_05)))*2-1 as decimal(5,3)) as devided_p_avg_ts_10_05
+,	cast((1/(1+EXP(0-p.avg_ts_10 / p.avg_ts_03)))*2-1 as decimal(5,3)) as devided_p_avg_ts_10_03
+,	cast((1/(1+EXP(0-p.avg_ts_20 / p.avg_ts_10)))*2-1 as decimal(5,3)) as devided_p_avg_ts_20_10
+,	cast((1/(1+EXP(0-p.avg_ts_20 / p.avg_ts_05)))*2-1 as decimal(5,3)) as devided_p_avg_ts_20_05
+,	cast((1/(1+EXP(0-p.avg_ts_20 / p.avg_ts_03)))*2-1 as decimal(5,3)) as devided_p_avg_ts_20_03
+,	cast((1/(1+EXP(0-p.avg_at_05 / p.avg_at_03)))*2-1 as decimal(5,3)) as devided_p_avg_at_05_03
+,	cast((1/(1+EXP(0-p.avg_at_10 / p.avg_at_05)))*2-1 as decimal(5,3)) as devided_p_avg_at_10_05
+,	cast((1/(1+EXP(0-p.avg_at_10 / p.avg_at_03)))*2-1 as decimal(5,3)) as devided_p_avg_at_10_03
+,	cast((1/(1+EXP(0-p.avg_at_20 / p.avg_at_10)))*2-1 as decimal(5,3)) as devided_p_avg_at_20_10
+,	cast((1/(1+EXP(0-p.avg_at_20 / p.avg_at_05)))*2-1 as decimal(5,3)) as devided_p_avg_at_20_05
+,	cast((1/(1+EXP(0-p.avg_at_20 / p.avg_at_03)))*2-1 as decimal(5,3)) as devided_p_avg_at_20_03
+,	cast((1/(1+EXP(0-p.avg_ov_05 / p.avg_ov_03)))*2-1 as decimal(5,3)) as devided_p_avg_ov_05_03
+,	cast((1/(1+EXP(0-p.avg_ov_10 / p.avg_ov_05)))*2-1 as decimal(5,3)) as devided_p_avg_ov_10_05
+,	cast((1/(1+EXP(0-p.avg_ov_10 / p.avg_ov_03)))*2-1 as decimal(5,3)) as devided_p_avg_ov_10_03
+,	cast((1/(1+EXP(0-p.avg_ov_20 / p.avg_ov_10)))*2-1 as decimal(5,3)) as devided_p_avg_ov_20_10
+,	cast((1/(1+EXP(0-p.avg_ov_20 / p.avg_ov_05)))*2-1 as decimal(5,3)) as devided_p_avg_ov_20_05
+,	cast((1/(1+EXP(0-p.avg_ov_20 / p.avg_ov_03)))*2-1 as decimal(5,3)) as devided_p_avg_ov_20_03
+,	cast((1/(1+EXP(0-p.avg_ss_05 / p.avg_ss_03)))*2-1 as decimal(5,3)) as devided_p_avg_ss_05_03
+,	cast((1/(1+EXP(0-p.avg_ss_10 / p.avg_ss_05)))*2-1 as decimal(5,3)) as devided_p_avg_ss_10_05
+,	cast((1/(1+EXP(0-p.avg_ss_10 / p.avg_ss_03)))*2-1 as decimal(5,3)) as devided_p_avg_ss_10_03
+,	cast((1/(1+EXP(0-p.avg_ss_20 / p.avg_ss_10)))*2-1 as decimal(5,3)) as devided_p_avg_ss_20_10
+,	cast((1/(1+EXP(0-p.avg_ss_20 / p.avg_ss_05)))*2-1 as decimal(5,3)) as devided_p_avg_ss_20_05
+,	cast((1/(1+EXP(0-p.avg_ss_20 / p.avg_ss_03)))*2-1 as decimal(5,3)) as devided_p_avg_ss_20_03
+
+,	cast((1/(1+EXP(0-v.avg_ts_05 / v.avg_ts_03)))*2-1 as decimal(5,3)) as devided_v_avg_ts_05_03
+,	cast((1/(1+EXP(0-v.avg_ts_10 / v.avg_ts_05)))*2-1 as decimal(5,3)) as devided_v_avg_ts_10_05
+,	cast((1/(1+EXP(0-v.avg_ts_10 / v.avg_ts_03)))*2-1 as decimal(5,3)) as devided_v_avg_ts_10_03
+,	cast((1/(1+EXP(0-v.avg_ts_20 / v.avg_ts_10)))*2-1 as decimal(5,3)) as devided_v_avg_ts_20_10
+,	cast((1/(1+EXP(0-v.avg_ts_20 / v.avg_ts_05)))*2-1 as decimal(5,3)) as devided_v_avg_ts_20_05
+,	cast((1/(1+EXP(0-v.avg_ts_20 / v.avg_ts_03)))*2-1 as decimal(5,3)) as devided_v_avg_ts_20_03
+,	cast((1/(1+EXP(0-v.avg_at_05 / v.avg_at_03)))*2-1 as decimal(5,3)) as devided_v_avg_at_05_03
+,	cast((1/(1+EXP(0-v.avg_at_10 / v.avg_at_05)))*2-1 as decimal(5,3)) as devided_v_avg_at_10_05
+,	cast((1/(1+EXP(0-v.avg_at_10 / v.avg_at_03)))*2-1 as decimal(5,3)) as devided_v_avg_at_10_03
+,	cast((1/(1+EXP(0-v.avg_at_20 / v.avg_at_10)))*2-1 as decimal(5,3)) as devided_v_avg_at_20_10
+,	cast((1/(1+EXP(0-v.avg_at_20 / v.avg_at_05)))*2-1 as decimal(5,3)) as devided_v_avg_at_20_05
+,	cast((1/(1+EXP(0-v.avg_at_20 / v.avg_at_03)))*2-1 as decimal(5,3)) as devided_v_avg_at_20_03
+,	cast((1/(1+EXP(0-v.avg_ov_05 / v.avg_ov_03)))*2-1 as decimal(5,3)) as devided_v_avg_ov_05_03
+,	cast((1/(1+EXP(0-v.avg_ov_10 / v.avg_ov_05)))*2-1 as decimal(5,3)) as devided_v_avg_ov_10_05
+,	cast((1/(1+EXP(0-v.avg_ov_10 / v.avg_ov_03)))*2-1 as decimal(5,3)) as devided_v_avg_ov_10_03
+,	cast((1/(1+EXP(0-v.avg_ov_20 / v.avg_ov_10)))*2-1 as decimal(5,3)) as devided_v_avg_ov_20_10
+,	cast((1/(1+EXP(0-v.avg_ov_20 / v.avg_ov_05)))*2-1 as decimal(5,3)) as devided_v_avg_ov_20_05
+,	cast((1/(1+EXP(0-v.avg_ov_20 / v.avg_ov_03)))*2-1 as decimal(5,3)) as devided_v_avg_ov_20_03
+,	cast((1/(1+EXP(0-v.avg_ss_05 / v.avg_ss_03)))*2-1 as decimal(5,3)) as devided_v_avg_ss_05_03
+,	cast((1/(1+EXP(0-v.avg_ss_10 / v.avg_ss_05)))*2-1 as decimal(5,3)) as devided_v_avg_ss_10_05
+,	cast((1/(1+EXP(0-v.avg_ss_10 / v.avg_ss_03)))*2-1 as decimal(5,3)) as devided_v_avg_ss_10_03
+,	cast((1/(1+EXP(0-v.avg_ss_20 / v.avg_ss_10)))*2-1 as decimal(5,3)) as devided_v_avg_ss_20_10
+,	cast((1/(1+EXP(0-v.avg_ss_20 / v.avg_ss_05)))*2-1 as decimal(5,3)) as devided_v_avg_ss_20_05
+,	cast((1/(1+EXP(0-v.avg_ss_20 / v.avg_ss_03)))*2-1 as decimal(5,3)) as devided_v_avg_ss_20_03
+
+,   cast((1/(1+EXP(0-p.avg_ts_03/f.avg_ts_03)))*2-1 as decimal(5,3)) as devided_p_f_avg_ts_03
+,   cast((1/(1+EXP(0-p.avg_ts_05/f.avg_ts_05)))*2-1 as decimal(5,3)) as devided_p_f_avg_ts_05
+,   cast((1/(1+EXP(0-p.avg_ts_10/f.avg_ts_10)))*2-1 as decimal(5,3)) as devided_p_f_avg_ts_10
+,   cast((1/(1+EXP(0-p.avg_ts_20/f.avg_ts_20)))*2-1 as decimal(5,3)) as devided_p_f_avg_ts_20
+,   cast((1/(1+EXP(0-p.avg_at_03/f.avg_at_03)))*2-1 as decimal(5,3)) as devided_p_f_avg_at_03
+,   cast((1/(1+EXP(0-p.avg_at_05/f.avg_at_05)))*2-1 as decimal(5,3)) as devided_p_f_avg_at_05
+,   cast((1/(1+EXP(0-p.avg_at_10/f.avg_at_10)))*2-1 as decimal(5,3)) as devided_p_f_avg_at_10
+,   cast((1/(1+EXP(0-p.avg_at_20/f.avg_at_20)))*2-1 as decimal(5,3)) as devided_p_f_avg_at_20
+,   cast((1/(1+EXP(0-p.avg_ov_03/f.avg_ov_03)))*2-1 as decimal(5,3)) as devided_p_f_avg_ov_03
+,   cast((1/(1+EXP(0-p.avg_ov_05/f.avg_ov_05)))*2-1 as decimal(5,3)) as devided_p_f_avg_ov_05
+,   cast((1/(1+EXP(0-p.avg_ov_10/f.avg_ov_10)))*2-1 as decimal(5,3)) as devided_p_f_avg_ov_10
+,   cast((1/(1+EXP(0-p.avg_ov_20/f.avg_ov_20)))*2-1 as decimal(5,3)) as devided_p_f_avg_ov_20
+,   cast((1/(1+EXP(0-p.avg_ss_03/f.avg_ss_03)))*2-1 as decimal(5,3)) as devided_p_f_avg_ss_03
+,   cast((1/(1+EXP(0-p.avg_ss_05/f.avg_ss_05)))*2-1 as decimal(5,3)) as devided_p_f_avg_ss_05
+,   cast((1/(1+EXP(0-p.avg_ss_10/f.avg_ss_10)))*2-1 as decimal(5,3)) as devided_p_f_avg_ss_10
+,   cast((1/(1+EXP(0-p.avg_ss_20/f.avg_ss_20)))*2-1 as decimal(5,3)) as devided_p_f_avg_ss_20
+
+,   cast((1/(1+EXP(0-v.avg_ts_03/f.avg_ts_03)))*2-1 as decimal(5,3)) as devided_v_f_avg_ts_03
+,   cast((1/(1+EXP(0-v.avg_ts_05/f.avg_ts_05)))*2-1 as decimal(5,3)) as devided_v_f_avg_ts_05
+,   cast((1/(1+EXP(0-v.avg_ts_10/f.avg_ts_10)))*2-1 as decimal(5,3)) as devided_v_f_avg_ts_10
+,   cast((1/(1+EXP(0-v.avg_ts_20/f.avg_ts_20)))*2-1 as decimal(5,3)) as devided_v_f_avg_ts_20
+,   cast((1/(1+EXP(0-v.avg_at_03/f.avg_at_03)))*2-1 as decimal(5,3)) as devided_v_f_avg_at_03
+,   cast((1/(1+EXP(0-v.avg_at_05/f.avg_at_05)))*2-1 as decimal(5,3)) as devided_v_f_avg_at_05
+,   cast((1/(1+EXP(0-v.avg_at_10/f.avg_at_10)))*2-1 as decimal(5,3)) as devided_v_f_avg_at_10
+,   cast((1/(1+EXP(0-v.avg_at_20/f.avg_at_20)))*2-1 as decimal(5,3)) as devided_v_f_avg_at_20
+,   cast((1/(1+EXP(0-v.avg_ov_03/f.avg_ov_03)))*2-1 as decimal(5,3)) as devided_v_f_avg_ov_03
+,   cast((1/(1+EXP(0-v.avg_ov_05/f.avg_ov_05)))*2-1 as decimal(5,3)) as devided_v_f_avg_ov_05
+,   cast((1/(1+EXP(0-v.avg_ov_10/f.avg_ov_10)))*2-1 as decimal(5,3)) as devided_v_f_avg_ov_10
+,   cast((1/(1+EXP(0-v.avg_ov_20/f.avg_ov_20)))*2-1 as decimal(5,3)) as devided_v_f_avg_ov_20
+,   cast((1/(1+EXP(0-v.avg_ss_03/f.avg_ss_03)))*2-1 as decimal(5,3)) as devided_v_f_avg_ss_03
+,   cast((1/(1+EXP(0-v.avg_ss_05/f.avg_ss_05)))*2-1 as decimal(5,3)) as devided_v_f_avg_ss_05
+,   cast((1/(1+EXP(0-v.avg_ss_10/f.avg_ss_10)))*2-1 as decimal(5,3)) as devided_v_f_avg_ss_10
+,   cast((1/(1+EXP(0-v.avg_ss_20/f.avg_ss_20)))*2-1 as decimal(5,3)) as devided_v_f_avg_ss_20
+
+,	cast((1/(1+EXP(0-f.ts_05_s + f.ts_03_s))) as decimal(5,3)) as devided_f_s_ts_05_03
+,	cast((1/(1+EXP(0-f.ts_10_s + f.ts_05_s))) as decimal(5,3)) as devided_f_s_ts_10_05
+,	cast((1/(1+EXP(0-f.ts_10_s + f.ts_03_s))) as decimal(5,3)) as devided_f_s_ts_10_03
+,	cast((1/(1+EXP(0-f.ts_20_s + f.ts_10_s))) as decimal(5,3)) as devided_f_s_ts_20_10
+,	cast((1/(1+EXP(0-f.ts_20_s + f.ts_05_s))) as decimal(5,3)) as devided_f_s_ts_20_05
+,	cast((1/(1+EXP(0-f.ts_20_s + f.ts_03_s))) as decimal(5,3)) as devided_f_s_ts_20_03
+,	cast((1/(1+EXP(0-f.at_05_s + f.at_03_s))) as decimal(5,3)) as devided_f_s_at_05_03
+,	cast((1/(1+EXP(0-f.at_10_s + f.at_05_s))) as decimal(5,3)) as devided_f_s_at_10_05
+,	cast((1/(1+EXP(0-f.at_10_s + f.at_03_s))) as decimal(5,3)) as devided_f_s_at_10_03
+,	cast((1/(1+EXP(0-f.at_20_s + f.at_10_s))) as decimal(5,3)) as devided_f_s_at_20_10
+,	cast((1/(1+EXP(0-f.at_20_s + f.at_05_s))) as decimal(5,3)) as devided_f_s_at_20_05
+,	cast((1/(1+EXP(0-f.at_20_s + f.at_03_s))) as decimal(5,3)) as devided_f_s_at_20_03
+,	cast((1/(1+EXP(0-f.ov_05_s + f.ov_03_s))) as decimal(5,3)) as devided_f_s_ov_05_03
+,	cast((1/(1+EXP(0-f.ov_10_s + f.ov_05_s))) as decimal(5,3)) as devided_f_s_ov_10_05
+,	cast((1/(1+EXP(0-f.ov_10_s + f.ov_03_s))) as decimal(5,3)) as devided_f_s_ov_10_03
+,	cast((1/(1+EXP(0-f.ov_20_s + f.ov_10_s))) as decimal(5,3)) as devided_f_s_ov_20_10
+,	cast((1/(1+EXP(0-f.ov_20_s + f.ov_05_s))) as decimal(5,3)) as devided_f_s_ov_20_05
+,	cast((1/(1+EXP(0-f.ov_20_s + f.ov_03_s))) as decimal(5,3)) as devided_f_s_ov_20_03
+,	cast((1/(1+EXP(0-f.ss_05_s + f.ss_03_s))) as decimal(5,3)) as devided_f_s_ss_05_03
+,	cast((1/(1+EXP(0-f.ss_10_s + f.ss_05_s))) as decimal(5,3)) as devided_f_s_ss_10_05
+,	cast((1/(1+EXP(0-f.ss_10_s + f.ss_03_s))) as decimal(5,3)) as devided_f_s_ss_10_03
+,	cast((1/(1+EXP(0-f.ss_20_s + f.ss_10_s))) as decimal(5,3)) as devided_f_s_ss_20_10
+,	cast((1/(1+EXP(0-f.ss_20_s + f.ss_05_s))) as decimal(5,3)) as devided_f_s_ss_20_05
+,	cast((1/(1+EXP(0-f.ss_20_s + f.ss_03_s))) as decimal(5,3)) as devided_f_s_ss_20_03
+
+,	cast((1/(1+EXP(0-p.ts_05_s + p.ts_03_s))) as decimal(5,3)) as devided_p_s_ts_05_03
+,	cast((1/(1+EXP(0-p.ts_10_s + p.ts_05_s))) as decimal(5,3)) as devided_p_s_ts_10_05
+,	cast((1/(1+EXP(0-p.ts_10_s + p.ts_03_s))) as decimal(5,3)) as devided_p_s_ts_10_03
+,	cast((1/(1+EXP(0-p.ts_20_s + p.ts_10_s))) as decimal(5,3)) as devided_p_s_ts_20_10
+,	cast((1/(1+EXP(0-p.ts_20_s + p.ts_05_s))) as decimal(5,3)) as devided_p_s_ts_20_05
+,	cast((1/(1+EXP(0-p.ts_20_s + p.ts_03_s))) as decimal(5,3)) as devided_p_s_ts_20_03
+,	cast((1/(1+EXP(0-p.at_05_s + p.at_03_s))) as decimal(5,3)) as devided_p_s_at_05_03
+,	cast((1/(1+EXP(0-p.at_10_s + p.at_05_s))) as decimal(5,3)) as devided_p_s_at_10_05
+,	cast((1/(1+EXP(0-p.at_10_s + p.at_03_s))) as decimal(5,3)) as devided_p_s_at_10_03
+,	cast((1/(1+EXP(0-p.at_20_s + p.at_10_s))) as decimal(5,3)) as devided_p_s_at_20_10
+,	cast((1/(1+EXP(0-p.at_20_s + p.at_05_s))) as decimal(5,3)) as devided_p_s_at_20_05
+,	cast((1/(1+EXP(0-p.at_20_s + p.at_03_s))) as decimal(5,3)) as devided_p_s_at_20_03
+,	cast((1/(1+EXP(0-p.ov_05_s + p.ov_03_s))) as decimal(5,3)) as devided_p_s_ov_05_03
+,	cast((1/(1+EXP(0-p.ov_10_s + p.ov_05_s))) as decimal(5,3)) as devided_p_s_ov_10_05
+,	cast((1/(1+EXP(0-p.ov_10_s + p.ov_03_s))) as decimal(5,3)) as devided_p_s_ov_10_03
+,	cast((1/(1+EXP(0-p.ov_20_s + p.ov_10_s))) as decimal(5,3)) as devided_p_s_ov_20_10
+,	cast((1/(1+EXP(0-p.ov_20_s + p.ov_05_s))) as decimal(5,3)) as devided_p_s_ov_20_05
+,	cast((1/(1+EXP(0-p.ov_20_s + p.ov_03_s))) as decimal(5,3)) as devided_p_s_ov_20_03
+,	cast((1/(1+EXP(0-p.ss_05_s + p.ss_03_s))) as decimal(5,3)) as devided_p_s_ss_05_03
+,	cast((1/(1+EXP(0-p.ss_10_s + p.ss_05_s))) as decimal(5,3)) as devided_p_s_ss_10_05
+,	cast((1/(1+EXP(0-p.ss_10_s + p.ss_03_s))) as decimal(5,3)) as devided_p_s_ss_10_03
+,	cast((1/(1+EXP(0-p.ss_20_s + p.ss_10_s))) as decimal(5,3)) as devided_p_s_ss_20_10
+,	cast((1/(1+EXP(0-p.ss_20_s + p.ss_05_s))) as decimal(5,3)) as devided_p_s_ss_20_05
+,	cast((1/(1+EXP(0-p.ss_20_s + p.ss_03_s))) as decimal(5,3)) as devided_p_s_ss_20_03
+
+,	cast((1/(1+EXP(0-v.ts_05_s + v.ts_03_s))) as decimal(5,3)) as devided_v_s_ts_05_03
+,	cast((1/(1+EXP(0-v.ts_10_s + v.ts_05_s))) as decimal(5,3)) as devided_v_s_ts_10_05
+,	cast((1/(1+EXP(0-v.ts_10_s + v.ts_03_s))) as decimal(5,3)) as devided_v_s_ts_10_03
+,	cast((1/(1+EXP(0-v.ts_20_s + v.ts_10_s))) as decimal(5,3)) as devided_v_s_ts_20_10
+,	cast((1/(1+EXP(0-v.ts_20_s + v.ts_05_s))) as decimal(5,3)) as devided_v_s_ts_20_05
+,	cast((1/(1+EXP(0-v.ts_20_s + v.ts_03_s))) as decimal(5,3)) as devided_v_s_ts_20_03
+,	cast((1/(1+EXP(0-v.at_05_s + v.at_03_s))) as decimal(5,3)) as devided_v_s_at_05_03
+,	cast((1/(1+EXP(0-v.at_10_s + v.at_05_s))) as decimal(5,3)) as devided_v_s_at_10_05
+,	cast((1/(1+EXP(0-v.at_10_s + v.at_03_s))) as decimal(5,3)) as devided_v_s_at_10_03
+,	cast((1/(1+EXP(0-v.at_20_s + v.at_10_s))) as decimal(5,3)) as devided_v_s_at_20_10
+,	cast((1/(1+EXP(0-v.at_20_s + v.at_05_s))) as decimal(5,3)) as devided_v_s_at_20_05
+,	cast((1/(1+EXP(0-v.at_20_s + v.at_03_s))) as decimal(5,3)) as devided_v_s_at_20_03
+,	cast((1/(1+EXP(0-v.ov_05_s + v.ov_03_s))) as decimal(5,3)) as devided_v_s_ov_05_03
+,	cast((1/(1+EXP(0-v.ov_10_s + v.ov_05_s))) as decimal(5,3)) as devided_v_s_ov_10_05
+,	cast((1/(1+EXP(0-v.ov_10_s + v.ov_03_s))) as decimal(5,3)) as devided_v_s_ov_10_03
+,	cast((1/(1+EXP(0-v.ov_20_s + v.ov_10_s))) as decimal(5,3)) as devided_v_s_ov_20_10
+,	cast((1/(1+EXP(0-v.ov_20_s + v.ov_05_s))) as decimal(5,3)) as devided_v_s_ov_20_05
+,	cast((1/(1+EXP(0-v.ov_20_s + v.ov_03_s))) as decimal(5,3)) as devided_v_s_ov_20_03
+,	cast((1/(1+EXP(0-v.ss_05_s + v.ss_03_s))) as decimal(5,3)) as devided_v_s_ss_05_03
+,	cast((1/(1+EXP(0-v.ss_10_s + v.ss_05_s))) as decimal(5,3)) as devided_v_s_ss_10_05
+,	cast((1/(1+EXP(0-v.ss_10_s + v.ss_03_s))) as decimal(5,3)) as devided_v_s_ss_10_03
+,	cast((1/(1+EXP(0-v.ss_20_s + v.ss_10_s))) as decimal(5,3)) as devided_v_s_ss_20_10
+,	cast((1/(1+EXP(0-v.ss_20_s + v.ss_05_s))) as decimal(5,3)) as devided_v_s_ss_20_05
+,	cast((1/(1+EXP(0-v.ss_20_s + v.ss_03_s))) as decimal(5,3)) as devided_v_s_ss_20_03
+
+,   cast((1/(1+EXP(0-p.ts_20_s+f.ts_20_s))) as decimal(5,3)) as devided_p_f_s_ts_20
+,   cast((1/(1+EXP(0-p.at_20_s+f.at_20_s))) as decimal(5,3)) as devided_p_f_s_at_20
+,   cast((1/(1+EXP(0-p.ov_20_s+f.ov_20_s))) as decimal(5,3)) as devided_p_f_s_ov_20
+,   cast((1/(1+EXP(0-p.ss_20_s+f.ss_20_s))) as decimal(5,3)) as devided_p_f_s_ss_20
+,   cast((1/(1+EXP(0-p.ts_10_s+f.ts_10_s))) as decimal(5,3)) as devided_p_f_s_ts_10
+,   cast((1/(1+EXP(0-p.at_10_s+f.at_10_s))) as decimal(5,3)) as devided_p_f_s_at_10
+,   cast((1/(1+EXP(0-p.ov_10_s+f.ov_10_s))) as decimal(5,3)) as devided_p_f_s_ov_10
+,   cast((1/(1+EXP(0-p.ss_10_s+f.ss_10_s))) as decimal(5,3)) as devided_p_f_s_ss_10
+,   cast((1/(1+EXP(0-p.ts_05_s+f.ts_05_s))) as decimal(5,3)) as devided_p_f_s_ts_05
+,   cast((1/(1+EXP(0-p.at_05_s+f.at_05_s))) as decimal(5,3)) as devided_p_f_s_at_05
+,   cast((1/(1+EXP(0-p.ov_05_s+f.ov_05_s))) as decimal(5,3)) as devided_p_f_s_ov_05
+,   cast((1/(1+EXP(0-p.ss_05_s+f.ss_05_s))) as decimal(5,3)) as devided_p_f_s_ss_05
+,   cast((1/(1+EXP(0-p.ts_03_s+f.ts_03_s))) as decimal(5,3)) as devided_p_f_s_ts_03
+,   cast((1/(1+EXP(0-p.at_03_s+f.at_03_s))) as decimal(5,3)) as devided_p_f_s_at_03
+,   cast((1/(1+EXP(0-p.ov_03_s+f.ov_03_s))) as decimal(5,3)) as devided_p_f_s_ov_03
+,   cast((1/(1+EXP(0-p.ss_03_s+f.ss_03_s))) as decimal(5,3)) as devided_p_f_s_ss_03
+
+,   cast((1/(1+EXP(0-v.ts_20_s+f.ts_20_s))) as decimal(5,3)) as devided_v_f_s_ts_20
+,   cast((1/(1+EXP(0-v.at_20_s+f.at_20_s))) as decimal(5,3)) as devided_v_f_s_at_20
+,   cast((1/(1+EXP(0-v.ov_20_s+f.ov_20_s))) as decimal(5,3)) as devided_v_f_s_ov_20
+,   cast((1/(1+EXP(0-v.ss_20_s+f.ss_20_s))) as decimal(5,3)) as devided_v_f_s_ss_20
+,   cast((1/(1+EXP(0-v.ts_10_s+f.ts_10_s))) as decimal(5,3)) as devided_v_f_s_ts_10
+,   cast((1/(1+EXP(0-v.at_10_s+f.at_10_s))) as decimal(5,3)) as devided_v_f_s_at_10
+,   cast((1/(1+EXP(0-v.ov_10_s+f.ov_10_s))) as decimal(5,3)) as devided_v_f_s_ov_10
+,   cast((1/(1+EXP(0-v.ss_10_s+f.ss_10_s))) as decimal(5,3)) as devided_v_f_s_ss_10
+,   cast((1/(1+EXP(0-v.ts_05_s+f.ts_05_s))) as decimal(5,3)) as devided_v_f_s_ts_05
+,   cast((1/(1+EXP(0-v.at_05_s+f.at_05_s))) as decimal(5,3)) as devided_v_f_s_at_05
+,   cast((1/(1+EXP(0-v.ov_05_s+f.ov_05_s))) as decimal(5,3)) as devided_v_f_s_ov_05
+,   cast((1/(1+EXP(0-v.ss_05_s+f.ss_05_s))) as decimal(5,3)) as devided_v_f_s_ss_05
+,   cast((1/(1+EXP(0-v.ts_03_s+f.ts_03_s))) as decimal(5,3)) as devided_v_f_s_ts_03
+,   cast((1/(1+EXP(0-v.at_03_s+f.at_03_s))) as decimal(5,3)) as devided_v_f_s_at_03
+,   cast((1/(1+EXP(0-v.ov_03_s+f.ov_03_s))) as decimal(5,3)) as devided_v_f_s_ov_03
+,   cast((1/(1+EXP(0-v.ss_03_s+f.ss_03_s))) as decimal(5,3)) as devided_v_f_s_ss_03
+
+from
+temp_full_merge  f
+inner join temp_pe_merge p on f.date_index = p.date_index
+inner join temp_volume_merge v on f.date_index = v.date_index
+;
+
+select * from final_global;
+
+select * from
+temp_full_merge  f
+inner join temp_pe_merge p on f.date_index = p.date_index
+inner join temp_volume_merge v on f.date_index = v.date_index
+;
+
+select f_a_ts_03, count(*) from final_global group by 1 order by 1;
+
+--
+-- select * from
+-- temp_volume_staging_add;
+--
+-- select * from
+-- temp_volume_staging_scale;
+--
+-- select  sc , count(*) from (
+-- select
+-- cast((1/(1+EXP(0-ratio_cur)))*2-1 as decimal(5,3)) as sc
+--  from (
+-- select (ts_20_s + 0.03860889684210527) / (-0.00014732745614035725 + 0.03860889684210527)
+-- as ratio_cur
+-- from temp_volume_staging_add ) t ) t group by sc order by sc;
+
+--
+--
+SELECT
+   COLUMN_NAME
+FROM
+   information_schema.COLUMNS
+WHERE
+   TABLE_NAME = 'temp_full_merge';
