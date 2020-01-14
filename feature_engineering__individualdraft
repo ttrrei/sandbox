@@ -1,0 +1,951 @@
+select * from transactions limit 100;
+
+
+
+drop table if exists increase_ratio;
+create temporary table increase_ratio as
+select code, date_index, increase_ratio,
+row_number() over(partition by date_index order by increase_ratio desc) as rank from (
+select code, date_index,
+case when cast(market_previous_close*100 as decimal(10,4))> 0
+then (cast(market_price as numeric) - cast(market_previous_close as numeric))*100/cast(market_previous_close as numeric)
+else -100 end as increase_ratio
+from transactions ) t;
+
+drop table if exists increase_calculation;
+create temporary table  increase_calculation as
+select  code, date_index, iratio00 as ratio_cur, rank00 as rank00,
+(iratio00 + iratio01 + iratio02)/3 as ratio_avg03,
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04)/5 as ratio_avg05,
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04 +
+iratio05 + iratio06 + iratio07 + iratio08 + iratio09)/10 as ratio_avg10,
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04 +
+iratio05 + iratio06 + iratio07 + iratio08 + iratio09 +
+iratio10 + iratio11 + iratio12 + iratio13 + iratio14 +
+iratio15 + iratio16 + iratio17 + iratio18 + iratio19)/20 as ratio_avg20,
+greatest(iratio00 , iratio01 , iratio02) as ratio_grt03,
+least(iratio00 , iratio01 , iratio02) as ratio_lst03,
+greatest(iratio00 , iratio01 , iratio02 , iratio03 , iratio04) as ratio_grt05,
+least(iratio00 , iratio01 , iratio02 , iratio03 , iratio04) as ratio_lst05,
+greatest(iratio00 , iratio01 , iratio02 , iratio03 , iratio04 ,
+iratio05 , iratio06 , iratio07 , iratio08 , iratio09) as ratio_grt10,
+least(iratio00 , iratio01 , iratio02 , iratio03 , iratio04 ,
+iratio05 , iratio06 , iratio07 , iratio08 , iratio09) as ratio_lst10,
+greatest(iratio00 , iratio01 , iratio02 , iratio03 , iratio04 ,
+iratio05 , iratio06 , iratio07 , iratio08 , iratio09 ,
+iratio10 , iratio11 , iratio12 , iratio13 , iratio14 ,
+iratio15 , iratio16 , iratio17 , iratio18 , iratio19) as ratio_grt20,
+least(iratio00 , iratio01 , iratio02 , iratio03 , iratio04 ,
+iratio05 , iratio06 , iratio07 , iratio08 , iratio09 ,
+iratio10 , iratio11 , iratio12 , iratio13 , iratio14 ,
+iratio15 , iratio16 , iratio17 , iratio18 , iratio19) as ratio_lst20,
+(rank00 + rank01 + rank02)/3 as rank_avg03,
+(rank00 + rank01 + rank02 + rank03 + rank04)/5 as rank_avg05,
+(rank00 + rank01 + rank02 + rank03 + rank04 +
+rank05 + rank06 + rank07 + rank08 + rank09)/10 as rank_avg10,
+(rank00 + rank01 + rank02 + rank03 + rank04 +
+rank05 + rank06 + rank07 + rank08 + rank09 +
+rank10 + rank11 + rank12 + rank13 + rank14 +
+rank15 + rank16 + rank17 + rank18 + rank19)/20 as rank_avg20,
+greatest(rank00 , rank01 , rank02) as rank_grt03,
+least(rank00 , rank01 , rank02) as rank_lst03,
+greatest(rank00 , rank01 , rank02 , rank03 , rank04) as rank_grt05,
+least(rank00 , rank01 , rank02 , rank03 , rank04) as rank_lst05,
+greatest(rank00 , rank01 , rank02 , rank03 , rank04 ,
+rank05 , rank06 , rank07 , rank08 , rank09) as rank_grt10,
+least(rank00 , rank01 , rank02 , rank03 , rank04 ,
+rank05 , rank06 , rank07 , rank08 , rank09) as rank_lst10,
+greatest(rank00 , rank01 , rank02 , rank03 , rank04 ,
+rank05 , rank06 , rank07 , rank08 , rank09 ,
+rank10 , rank11 , rank12 , rank13 , rank14 ,
+rank15 , rank16 , rank17 , rank18 , rank19) as rank_grt20,
+least(rank00 , rank01 , rank02 , rank03 , rank04 ,
+rank05 , rank06 , rank07 , rank08 , rank09 ,
+rank10 , rank11 , rank12 , rank13 , rank14 ,
+rank15 , rank16 , rank17 , rank18 , rank19) as rank_lst20
+from ( select code, date_index, increase_ratio as iratio00, rank as rank00
+, lag(increase_ratio, 01) over(partition by code order by date_index ) iratio01
+, lag(increase_ratio, 02) over(partition by code order by date_index ) iratio02
+, lag(increase_ratio, 03) over(partition by code order by date_index ) iratio03
+, lag(increase_ratio, 04) over(partition by code order by date_index ) iratio04
+, lag(increase_ratio, 05) over(partition by code order by date_index ) iratio05
+, lag(increase_ratio, 06) over(partition by code order by date_index ) iratio06
+, lag(increase_ratio, 07) over(partition by code order by date_index ) iratio07
+, lag(increase_ratio, 08) over(partition by code order by date_index ) iratio08
+, lag(increase_ratio, 09) over(partition by code order by date_index ) iratio09
+, lag(increase_ratio, 10) over(partition by code order by date_index ) iratio10
+, lag(increase_ratio, 11) over(partition by code order by date_index ) iratio11
+, lag(increase_ratio, 12) over(partition by code order by date_index ) iratio12
+, lag(increase_ratio, 13) over(partition by code order by date_index ) iratio13
+, lag(increase_ratio, 14) over(partition by code order by date_index ) iratio14
+, lag(increase_ratio, 15) over(partition by code order by date_index ) iratio15
+, lag(increase_ratio, 16) over(partition by code order by date_index ) iratio16
+, lag(increase_ratio, 17) over(partition by code order by date_index ) iratio17
+, lag(increase_ratio, 18) over(partition by code order by date_index ) iratio18
+, lag(increase_ratio, 19) over(partition by code order by date_index ) iratio19
+, lag(rank, 01) over(partition by code order by date_index ) rank01
+, lag(rank, 02) over(partition by code order by date_index ) rank02
+, lag(rank, 03) over(partition by code order by date_index ) rank03
+, lag(rank, 04) over(partition by code order by date_index ) rank04
+, lag(rank, 05) over(partition by code order by date_index ) rank05
+, lag(rank, 06) over(partition by code order by date_index ) rank06
+, lag(rank, 07) over(partition by code order by date_index ) rank07
+, lag(rank, 08) over(partition by code order by date_index ) rank08
+, lag(rank, 09) over(partition by code order by date_index ) rank09
+, lag(rank, 10) over(partition by code order by date_index ) rank10
+, lag(rank, 11) over(partition by code order by date_index ) rank11
+, lag(rank, 12) over(partition by code order by date_index ) rank12
+, lag(rank, 13) over(partition by code order by date_index ) rank13
+, lag(rank, 14) over(partition by code order by date_index ) rank14
+, lag(rank, 15) over(partition by code order by date_index ) rank15
+, lag(rank, 16) over(partition by code order by date_index ) rank16
+, lag(rank, 17) over(partition by code order by date_index ) rank17
+, lag(rank, 18) over(partition by code order by date_index ) rank18
+, lag(rank, 19) over(partition by code order by date_index ) rank19
+from increase_ratio  ) t where date_index >= 20;
+
+drop table if exists tempx;
+create temp table tempx as select  code, date_index,
+average_increase_ratio00, average_increase_ratio03, average_increase_ratio05, average_increase_ratio10, average_increase_ratio20
+, cast((1/(1+EXP(0-(average_increase_ratio03/average_increase_ratio05)))*2 -1)  as decimal(5,3)) as devided_avg_increase_ratio_0305
+, cast((1/(1+EXP(0-(average_increase_ratio03/average_increase_ratio10)))*2 -1)  as decimal(5,3)) as devided_avg_increase_ratio_0310
+, cast((1/(1+EXP(0-(average_increase_ratio03/average_increase_ratio20)))*2 -1)  as decimal(5,3)) as devided_avg_increase_ratio_0320
+, cast((1/(1+EXP(0-(average_increase_ratio05/average_increase_ratio10)))*2 -1)  as decimal(5,3)) as devided_avg_increase_ratio_0510
+, cast((1/(1+EXP(0-(average_increase_ratio05/average_increase_ratio20)))*2 -1)  as decimal(5,3)) as devided_avg_increase_ratio_0520
+, cast((1/(1+EXP(0-(average_increase_ratio10/average_increase_ratio20)))*2 -1)  as decimal(5,3)) as devided_avg_increase_ratio_1020
+from (select  code, date_index
+, case when cast((1/(1+EXP(0-ratio_cur*0.3))) as decimal(5,3)) = 0.000 then 0.001 else cast((1/(1+EXP(0-ratio_cur*0.3))) as decimal(5,3)) end  as average_increase_ratio00
+, case when cast((1/(1+EXP(0-ratio_avg03*0.3))) as decimal(5,3)) = 0.000 then 0.001 else cast((1/(1+EXP(0-ratio_avg03*0.3))) as decimal(5,3)) end  as average_increase_ratio03
+, case when cast((1/(1+EXP(0-ratio_avg05*0.3))) as decimal(5,3)) = 0.000 then 0.001 else cast((1/(1+EXP(0-ratio_avg05*0.3))) as decimal(5,3)) end  as average_increase_ratio05
+, case when cast((1/(1+EXP(0-ratio_avg10*0.3))) as decimal(5,3)) = 0.000 then 0.001 else cast((1/(1+EXP(0-ratio_avg10*0.3))) as decimal(5,3)) end  as average_increase_ratio10
+, case when cast((1/(1+EXP(0-ratio_avg20*0.3))) as decimal(5,3)) = 0.000 then 0.001 else cast((1/(1+EXP(0-ratio_avg20*0.3))) as decimal(5,3)) end  as average_increase_ratio20
+from increase_calculation) t;
+
+
+drop table if exists pe_rank;
+create temporary table pe_rank as
+select code, date_index, case when  forward_pe is null then -999 else forward_pe end as forward_pe,
+row_number() over(partition by date_index order by case when forward_pe is null then -999 else forward_pe end desc) as rank
+from transactions t
+order by 2 desc , 3 desc;
+
+drop table if exists pe_median03;
+create temporary table pe_median03 as
+select code, date_index, cast(1/(1+exp(0- (cast(list as decimal(10,4))-15) *0.1)) as decimal(5,3)) as pe from (
+select code, date_index, list, row_number() over (partition by code, date_index order by list) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( pe00, pe01, pe02)) as list from (
+select code, date_index, forward_pe as pe00
+, lag(forward_pe, 01) over (partition by code order by date_index) as pe01
+, lag(forward_pe, 02) over (partition by code order by date_index) as pe02
+from pe_rank ) t where date_index not in (1,2) ) t ) t where row_number = 2;
+
+drop table if exists pe_median05;
+create temporary table pe_median05 as
+select code, date_index, cast(1/(1+exp(0- (cast(list as decimal(10,4))-15) *0.1)) as decimal(5,3)) as pe from (
+select code, date_index, list, row_number() over (partition by code, date_index order by list) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( pe00, pe01, pe02, pe03,pe04)) as list from (
+select code, date_index, forward_pe as pe00
+, lag(forward_pe, 01) over (partition by code order by date_index) as pe01
+, lag(forward_pe, 02) over (partition by code order by date_index) as pe02
+, lag(forward_pe, 03) over (partition by code order by date_index) as pe03
+, lag(forward_pe, 04) over (partition by code order by date_index) as pe04
+from pe_rank ) t where date_index not in (1,2,3,4) ) t ) t where row_number = 3;
+
+drop table if exists pe_median10;
+create temporary table pe_median10 as
+select code, date_index, cast(1/(1+exp(0- (cast(list as decimal(10,4))-15) *0.1)) as decimal(5,3)) as pe from (
+select code, date_index, list, row_number() over (partition by code, date_index order by list) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( pe00, pe01, pe02, pe03, pe04, pe05, pe06, pe07, pe08, pe09)) as list from (
+select code, date_index, forward_pe as pe00
+, lag(forward_pe, 01) over (partition by code order by date_index) as pe01
+, lag(forward_pe, 02) over (partition by code order by date_index) as pe02
+, lag(forward_pe, 03) over (partition by code order by date_index) as pe03
+, lag(forward_pe, 04) over (partition by code order by date_index) as pe04
+, lag(forward_pe, 05) over (partition by code order by date_index) as pe05
+, lag(forward_pe, 06) over (partition by code order by date_index) as pe06
+, lag(forward_pe, 07) over (partition by code order by date_index) as pe07
+, lag(forward_pe, 08) over (partition by code order by date_index) as pe08
+, lag(forward_pe, 09) over (partition by code order by date_index) as pe09
+from pe_rank ) t where date_index not in (1,2,3,4,5,6,7,8,9) ) t ) t where row_number = 5;
+
+drop table if exists pe_median20;
+create temporary table pe_median20 as
+select code, date_index, cast(1/(1+exp(0- (cast(list as decimal(10,4))-15) *0.1)) as decimal(5,3)) as pe from (
+select code, date_index, list, row_number() over (partition by code, date_index order by list) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	pe00, pe01, pe02, pe03, pe04, pe05, pe06, pe07, pe08, pe09
+   ,pe10, pe11, pe12, pe13, pe14, pe15, pe16, pe17, pe18, pe19)) as list from (
+select code, date_index, forward_pe as pe00
+, lag(forward_pe, 01) over (partition by code order by date_index) as pe01
+, lag(forward_pe, 02) over (partition by code order by date_index) as pe02
+, lag(forward_pe, 03) over (partition by code order by date_index) as pe03
+, lag(forward_pe, 04) over (partition by code order by date_index) as pe04
+, lag(forward_pe, 05) over (partition by code order by date_index) as pe05
+, lag(forward_pe, 06) over (partition by code order by date_index) as pe06
+, lag(forward_pe, 07) over (partition by code order by date_index) as pe07
+, lag(forward_pe, 08) over (partition by code order by date_index) as pe08
+, lag(forward_pe, 09) over (partition by code order by date_index) as pe09
+, lag(forward_pe, 10) over (partition by code order by date_index) as pe10
+, lag(forward_pe, 11) over (partition by code order by date_index) as pe11
+, lag(forward_pe, 12) over (partition by code order by date_index) as pe12
+, lag(forward_pe, 13) over (partition by code order by date_index) as pe13
+, lag(forward_pe, 14) over (partition by code order by date_index) as pe14
+, lag(forward_pe, 15) over (partition by code order by date_index) as pe15
+, lag(forward_pe, 16) over (partition by code order by date_index) as pe16
+, lag(forward_pe, 17) over (partition by code order by date_index) as pe17
+, lag(forward_pe, 18) over (partition by code order by date_index) as pe18
+, lag(forward_pe, 19) over (partition by code order by date_index) as pe19
+from pe_rank ) t where date_index not in (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19) ) t ) t where row_number = 10;
+
+drop table if exists tempv;
+create table tempv as
+select code, date_index, case when pe_cur = 0.0 then 0.001 else pe_cur end as pe_cur, pe_mdn03,pe_mdn05,pe_mdn10,pe_mdn20
+, cast((1/(1+EXP(0-(pe0305-1)*80))) as decimal(5,3)) as devided_mdn_pe_0305
+, cast((1/(1+EXP(0-(pe0310-1)*80))) as decimal(5,3)) as devided_mdn_pe_0310
+, cast((1/(1+EXP(0-(pe0320-1)*80))) as decimal(5,3)) as devided_mdn_pe_0320
+, cast((1/(1+EXP(0-(pe0510-1)*80))) as decimal(5,3)) as devided_mdn_pe_0510
+, cast((1/(1+EXP(0-(pe0520-1)*80))) as decimal(5,3)) as devided_mdn_pe_0520
+, cast((1/(1+EXP(0-(pe1020-1)*80))) as decimal(5,3)) as devided_mdn_pe_1020
+from (
+select code, date_index, case when pe_cur = 0.0 then 0.001 else pe_cur end as pe_cur, pe_mdn03,pe_mdn05,pe_mdn10,pe_mdn20
+, case when pe_mdn03/pe_mdn05 > 10 then 10 when pe_mdn03/pe_mdn05 <-10 then -10 else pe_mdn03/pe_mdn05 end as pe0305
+, case when pe_mdn03/pe_mdn10 > 10 then 10 when pe_mdn03/pe_mdn10 <-10 then -10 else pe_mdn03/pe_mdn10 end as pe0310
+, case when pe_mdn03/pe_mdn20 > 10 then 10 when pe_mdn03/pe_mdn20 <-10 then -10 else pe_mdn03/pe_mdn20 end as pe0320
+, case when pe_mdn05/pe_mdn10 > 10 then 10 when pe_mdn05/pe_mdn10 <-10 then -10 else pe_mdn05/pe_mdn10 end as pe0510
+, case when pe_mdn05/pe_mdn20 > 10 then 10 when pe_mdn05/pe_mdn20 <-10 then -10 else pe_mdn05/pe_mdn20 end as pe0520
+, case when pe_mdn10/pe_mdn20 > 10 then 10 when pe_mdn10/pe_mdn20 <-10 then -10 else pe_mdn10/pe_mdn20 end as pe1020
+from ( select s.code, s.date_index
+    ,  case when cast(1/(1+exp(0- (cast(s.forward_pe as decimal(10,4))-15) *0.1)) as decimal(5,3))  = 0.0
+        then 0.001 else  cast(1/(1+exp(0- (cast(s.forward_pe as decimal(10,4))-15) *0.1)) as decimal(5,3)) end as pe_cur
+    , case when p.pe = 0.0 then 0.001 else p.pe end as pe_mdn03
+    , case when m.pe = 0.0 then 0.001 else m.pe end as pe_mdn05
+    , case when n.pe = 0.0 then 0.001 else n.pe end as pe_mdn10
+    , case when q.pe = 0.0 then 0.001 else q.pe end as pe_mdn20
+from pe_rank s
+left join pe_median03 p on s.code = p.code and s.date_index = p.date_index
+left join pe_median05 m on s.code = m.code and s.date_index = m.date_index
+left join pe_median10 n on s.code = n.code and s.date_index = n.date_index
+left join pe_median20 q on s.code = q.code and s.date_index = q.date_index ) t ) t;
+
+
+
+drop table if exists mp_calculation;
+create temporary table mp_calculation as
+select code, date_index
+, json_build_array(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19) as idx20
+, json_build_array(0,1,2,3,4,5,6,7,8,9) as idx10
+, json_build_array(0,1,2,3,4) as idx05
+, json_build_array(
+  (mp19 - mp19)/avgmp , (mp18 - mp19)/avgmp , (mp17 - mp19)/avgmp
+, (mp16 - mp19)/avgmp , (mp15 - mp19)/avgmp , (mp14 - mp19)/avgmp
+, (mp13 - mp19)/avgmp , (mp12 - mp19)/avgmp , (mp11 - mp19)/avgmp
+, (mp10 - mp19)/avgmp , (mp09 - mp19)/avgmp , (mp08 - mp19)/avgmp
+, (mp07 - mp19)/avgmp , (mp06 - mp19)/avgmp , (mp05 - mp19)/avgmp
+, (mp04 - mp19)/avgmp , (mp03 - mp19)/avgmp , (mp02 - mp19)/avgmp
+, (mp01 - mp19)/avgmp , (mp00 - mp19)/avgmp ) as list20
+, json_build_array(
+  (mp09 - mp09)/avgmp , (mp08 - mp09)/avgmp , (mp07 - mp09)/avgmp
+, (mp06 - mp09)/avgmp , (mp05 - mp09)/avgmp , (mp04 - mp09)/avgmp
+, (mp03 - mp09)/avgmp , (mp02 - mp09)/avgmp , (mp01 - mp09)/avgmp
+, (mp00 - mp09)/avgmp ) as list10
+, json_build_array(
+  (mp04 - mp04)/avgmp , (mp03 - mp04)/avgmp , (mp02 - mp04)/avgmp
+, (mp01 - mp04)/avgmp , (mp00 - mp04)/avgmp ) as list05 from
+(select case when mp00 + mp01 + mp02 + mp03 + mp04 + mp05 + mp06 + mp07 + mp08 + mp09
+	+ mp10 + mp11 + mp12 + mp13 + mp14 + mp15 + mp16 + mp17 + mp18 + mp19  = 0
+	then null else (mp00 + mp01 + mp02 + mp03 + mp04 + mp05 + mp06 + mp07 + mp08 + mp09
+	+ mp10 + mp11 + mp12 + mp13 + mp14 + mp15 + mp16 + mp17 + mp18 + mp19)/20 end as avgmp
+, * from ( select code, date_index, market_price as mp00
+, lag(market_price, 01) over( partition by code order by load_date) as mp01
+, lag(market_price, 02) over( partition by code order by load_date) as mp02
+, lag(market_price, 03) over( partition by code order by load_date) as mp03
+, lag(market_price, 04) over( partition by code order by load_date) as mp04
+, lag(market_price, 05) over( partition by code order by load_date) as mp05
+, lag(market_price, 06) over( partition by code order by load_date) as mp06
+, lag(market_price, 07) over( partition by code order by load_date) as mp07
+, lag(market_price, 08) over( partition by code order by load_date) as mp08
+, lag(market_price, 09) over( partition by code order by load_date) as mp09
+, lag(market_price, 10) over( partition by code order by load_date) as mp10
+, lag(market_price, 11) over( partition by code order by load_date) as mp11
+, lag(market_price, 12) over( partition by code order by load_date) as mp12
+, lag(market_price, 13) over( partition by code order by load_date) as mp13
+, lag(market_price, 14) over( partition by code order by load_date) as mp14
+, lag(market_price, 15) over( partition by code order by load_date) as mp15
+, lag(market_price, 16) over( partition by code order by load_date) as mp16
+, lag(market_price, 17) over( partition by code order by load_date) as mp17
+, lag(market_price, 18) over( partition by code order by load_date) as mp18
+, lag(market_price, 19) over( partition by code order by load_date) as mp19
+from transactions ) t ) t ;
+
+drop table if exists temp20;
+create temporary table temp20 as
+select code, date_index, regr_slope(y,x) as s20, regr_intercept(y,x) as i20 from (
+select code, date_index
+     , cast(json_array_elements_text(idx20) as decimal (10,7)) as x
+     , cast(json_array_elements_text(list20) as decimal (10,7)) as y
+from mp_calculation ) t group by code, date_index ;
+
+
+drop table if exists temp10;
+create temporary table temp10 as
+select code, date_index, regr_slope(y,x) as s10, regr_intercept(y,x) as i10 from (
+select code, date_index
+     , cast(json_array_elements_text(idx10) as decimal (10,7)) as x
+     , cast(json_array_elements_text(list10) as decimal (10,7)) as y
+from mp_calculation ) t group by code, date_index ;
+
+drop table if exists temp05;
+create temporary table temp05 as
+select code, date_index, regr_slope(y,x) as s05, regr_intercept(y,x) as i05 from (
+select code, date_index
+     , cast(json_array_elements_text(idx05) as decimal (10,7)) as x
+     , cast(json_array_elements_text(list05) as decimal (10,7)) as y
+from mp_calculation ) t group by code, date_index ;
+
+drop table if exists tempy;
+create table tempy as
+select code, date_index, s05 as slope05, s10 as slope10, s20 as slope20
+, cast((1/(1+EXP(0-(s05/s10)))*2 -1)  as decimal(5,3)) as devided_slope_0510
+, cast((1/(1+EXP(0-(s05/s20)))*2 -1)  as decimal(5,3)) as devided_slope_0520
+, cast((1/(1+EXP(0-(s10/s20)))*2 -1)  as decimal(5,3)) as devided_slope_1020
+from (select m.code, m.date_index
+, case when cast((1/(1+EXP(0-(t05.s05*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(t05.s05*50 )))) as decimal (5,3)) end as s05
+, case when cast((1/(1+EXP(0-(t10.s10*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(t10.s10*50 )))) as decimal (5,3)) end as s10
+, case when cast((1/(1+EXP(0-(t20.s20*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(t20.s20*50 )))) as decimal (5,3)) end as s20
+from mp_calculation m
+inner join temp05 t05 on m.code = t05.code and m.date_index = t05.date_index
+inner join temp10 t10 on m.code = t10.code and m.date_index = t10.date_index
+inner join temp20 t20 on m.code = t20.code and m.date_index = t20.date_index
+) t ;
+
+
+drop table if exists price_ratio;
+create temporary table price_ratio as select code, load_date, date_index,
+case when price_ratio > 1 then 1.000 when price_ratio < 0 then 0.000 else cast(price_ratio as decimal(5,3)) end as price_ratio,
+row_number() over(partition by date_index order by price_ratio desc) as rank
+from (select code, load_date, date_index,
+case when market_day_high<> market_day_low then
+(market_price- market_day_low)/(market_day_high-market_day_low)
+else 0 end as price_ratio from transactions ) t ;
+
+drop table if exists price_calculation;
+create temporary table price_calculation as  select code, date_index, pr00
+, case when cast(pr_avg03 as decimal(5,3)) = 0.0 then 0.001 else cast(pr_avg03 as decimal(5,3)) end as pr_avg03
+, case when cast(pr_avg05 as decimal(5,3)) = 0.0 then 0.001 else cast(pr_avg05 as decimal(5,3)) end as pr_avg05
+, case when cast(pr_avg10 as decimal(5,3)) = 0.0 then 0.001 else cast(pr_avg10 as decimal(5,3)) end as pr_avg10
+, case when cast(pr_avg20 as decimal(5,3)) = 0.0 then 0.001 else cast(pr_avg20 as decimal(5,3)) end as pr_avg20
+from ( select code, date_index, pr00, (pr00 + pr01 + pr02)/3 as pr_avg03,
+(pr00 + pr01 + pr02 + pr03 + pr04)/5 as pr_avg05,
+(pr00 + pr01 + pr02 + pr03 + pr04 + pr05 + pr06 + pr07 + pr08 + pr09)/10 as pr_avg10,
+(pr00 + pr01 + pr02 + pr03 + pr04 + pr05 + pr06 + pr07 + pr08 + pr09 +
+pr10 + pr11 + pr12 + pr13 + pr14 + pr15 + pr16 + pr17 + pr18 + pr19)/20 as pr_avg20
+from  ( select code, date_index, price_ratio as pr00
+, lag(price_ratio, 01) over( partition by code order by date_index) as pr01
+, lag(price_ratio, 02) over( partition by code order by date_index) as pr02
+, lag(price_ratio, 03) over( partition by code order by date_index) as pr03
+, lag(price_ratio, 04) over( partition by code order by date_index) as pr04
+, lag(price_ratio, 05) over( partition by code order by date_index) as pr05
+, lag(price_ratio, 06) over( partition by code order by date_index) as pr06
+, lag(price_ratio, 07) over( partition by code order by date_index) as pr07
+, lag(price_ratio, 08) over( partition by code order by date_index) as pr08
+, lag(price_ratio, 09) over( partition by code order by date_index) as pr09
+, lag(price_ratio, 10) over( partition by code order by date_index) as pr10
+, lag(price_ratio, 11) over( partition by code order by date_index) as pr11
+, lag(price_ratio, 12) over( partition by code order by date_index) as pr12
+, lag(price_ratio, 13) over( partition by code order by date_index) as pr13
+, lag(price_ratio, 14) over( partition by code order by date_index) as pr14
+, lag(price_ratio, 15) over( partition by code order by date_index) as pr15
+, lag(price_ratio, 16) over( partition by code order by date_index) as pr16
+, lag(price_ratio, 17) over( partition by code order by date_index) as pr17
+, lag(price_ratio, 18) over( partition by code order by date_index) as pr18
+, lag(price_ratio, 19) over( partition by code order by date_index) as pr19
+from price_ratio ) t ) t;
+
+drop table if exists tempz;
+create temporary table tempz as
+select code, date_index, pr00, pr_avg03, pr_avg05, pr_avg10, pr_avg20
+, cast((1/(1+EXP(0-(pr_avg03/pr_avg05*5-5))))  as decimal(5,3)) as devided_avg_price_ratio_0305
+, cast((1/(1+EXP(0-(pr_avg03/pr_avg10*5-5))))  as decimal(5,3)) as devided_avg_price_ratio_0310
+, cast((1/(1+EXP(0-(pr_avg03/pr_avg20*5-5))))  as decimal(5,3)) as devided_avg_price_ratio_0320
+, cast((1/(1+EXP(0-(pr_avg05/pr_avg10*5-5))))  as decimal(5,3)) as devided_avg_price_ratio_0510
+, cast((1/(1+EXP(0-(pr_avg05/pr_avg20*5-5))))  as decimal(5,3)) as devided_avg_price_ratio_0520
+, cast((1/(1+EXP(0-(pr_avg10/pr_avg20*5-5))))  as decimal(5,3)) as devided_avg_price_ratio_1020
+from price_calculation ;
+
+
+drop table if exists temp_sub;
+create temporary table temp_sub as
+select code, date_index, average_volume,
+market_volume * (market_price - market_previous_close)/market_previous_close as strength
+from transactions where market_previous_close <> 0 and  market_previous_close is not null;
+
+drop table if exists temp_strength;
+create table temp_strength as
+select t00.code, t00.date_index , t00.strength/t00.average_volume as current_strength
+, (t00.strength*5 + t01.strength*4 + t02.strength*3 + t03.strength*2 + t04.strength*1)/15/t00.average_volume as back05
+, (t00.strength*10 + t01.strength*9 + t02.strength*8 + t03.strength*7 + t04.strength*6
++  t05.strength*5 + t06.strength*4 + t07.strength*3 + t08.strength*2 + t09.strength*1)/55/t00.average_volume as back10
+, (t00.strength*20 + t01.strength*19 + t02.strength*18 + t03.strength*17 + t04.strength*16
++  t05.strength*15 + t06.strength*14 + t07.strength*13 + t08.strength*12 + t09.strength*11
++  t10.strength*10 + t11.strength*9 + t12.strength*8 + t13.strength*7 + t14.strength*6
++  t15.strength*5 + t16.strength*4 + t17.strength*3 + t18.strength*2 + t19.strength*1)/210/t00.average_volume as back20
+from temp_sub t00
+inner join temp_sub t01 on t00.date_index = t01.date_index +1  and t00.code = t01.code
+inner join temp_sub t02 on t00.date_index = t02.date_index +2  and t00.code = t02.code
+inner join temp_sub t03 on t00.date_index = t03.date_index +3  and t00.code = t03.code
+inner join temp_sub t04 on t00.date_index = t04.date_index +4  and t00.code = t04.code
+inner join temp_sub t05 on t00.date_index = t05.date_index +5  and t00.code = t05.code
+inner join temp_sub t06 on t00.date_index = t06.date_index +6  and t00.code = t06.code
+inner join temp_sub t07 on t00.date_index = t07.date_index +7  and t00.code = t07.code
+inner join temp_sub t08 on t00.date_index = t08.date_index +8  and t00.code = t08.code
+inner join temp_sub t09 on t00.date_index = t09.date_index +9  and t00.code = t09.code
+inner join temp_sub t10 on t00.date_index = t10.date_index +10 and t00.code = t10.code
+inner join temp_sub t11 on t00.date_index = t11.date_index +11 and t00.code = t11.code
+inner join temp_sub t12 on t00.date_index = t12.date_index +12 and t00.code = t12.code
+inner join temp_sub t13 on t00.date_index = t13.date_index +13 and t00.code = t13.code
+inner join temp_sub t14 on t00.date_index = t14.date_index +14 and t00.code = t14.code
+inner join temp_sub t15 on t00.date_index = t15.date_index +15 and t00.code = t15.code
+inner join temp_sub t16 on t00.date_index = t16.date_index +16 and t00.code = t16.code
+inner join temp_sub t17 on t00.date_index = t17.date_index +17 and t00.code = t17.code
+inner join temp_sub t18 on t00.date_index = t18.date_index +18 and t00.code = t18.code
+inner join temp_sub t19 on t00.date_index = t19.date_index +19 and t00.code = t19.code;
+
+drop table if exists tempm;
+create temporary table tempm as
+select code, date_index, strength00, strength05, strength10, strength20
+, cast((1/(1+EXP(0-(strength00/strength05)))*2 -1)  as decimal(5,3)) as devided_weight_strength_0005
+, cast((1/(1+EXP(0-(strength00/strength10)))*2 -1)  as decimal(5,3)) as devided_weight_strength_0010
+, cast((1/(1+EXP(0-(strength00/strength20)))*2 -1)  as decimal(5,3)) as devided_weight_strength_0020
+, cast((1/(1+EXP(0-(strength05/strength10)))*2 -1)  as decimal(5,3)) as devided_weight_strength_0510
+, cast((1/(1+EXP(0-(strength05/strength20)))*2 -1)  as decimal(5,3)) as devided_weight_strength_0520
+, cast((1/(1+EXP(0-(strength10/strength20)))*2 -1)  as decimal(5,3)) as devided_weight_strength_1020
+from (select  code, date_index
+, case when cast((1/(1+EXP(0-(current_strength*50))))  as decimal(5,3)) = 0.0 then 0.001
+    else cast((1/(1+EXP(0-(current_strength*50))))  as decimal(5,3)) end as strength00
+, case when cast((1/(1+EXP(0-(back05*50))))  as decimal(5,3)) = 0.0 then 0.001
+    else cast((1/(1+EXP(0-(back05*50))))  as decimal(5,3)) end as strength05
+, case when cast((1/(1+EXP(0-(back10*50))))  as decimal(5,3)) = 0.0 then 0.001
+    else cast((1/(1+EXP(0-(back10*50))))  as decimal(5,3)) end as strength10
+, case when cast((1/(1+EXP(0-(back20*50))))  as decimal(5,3)) = 0.0 then 0.001
+    else cast((1/(1+EXP(0-(back20*50))))  as decimal(5,3)) end as strength20
+from temp_strength ) t;
+
+
+
+
+
+drop table if exists temp_rsv;
+create temp table temp_rsv as
+select code, load_date, date_index, top, down, recent,
+case when top = down then 0 else (recent - down)/(top - down) end as rsv from
+( select code, load_date, date_index,  market_price as recent,
+greatest(   market_day_high
+, lag(market_day_high, 1) over( partition by code order by load_date)
+, lag(market_day_high, 2) over( partition by code order by load_date)
+, lag(market_day_high, 3) over( partition by code order by load_date)
+, lag(market_day_high, 4) over( partition by code order by load_date)
+) as top, least(   market_day_low
+, lag(market_day_low, 1) over( partition by code order by load_date)
+, lag(market_day_low, 2) over( partition by code order by load_date)
+, lag(market_day_low, 3) over( partition by code order by load_date)
+, lag(market_day_low, 4) over( partition by code order by load_date)
+) as down from transactions ) temp ;
+
+drop table if exists temp_kind;
+create temporary table temp_kind as
+select code, load_date, date_index,
+((2^5/3^6) + (2^4/3^5)*lag_4 + (2^3/3^4)*lag_3 + (2^2/3^3)*lag_2 + (2^1/3^2)*lag_1 + (2^0/3^1)*lag_0) * 1.09625
+    as kind from (
+select code, load_date, date_index, rsv as lag_0,
+lag(rsv, 1) over (partition by code order by load_date) as lag_1,
+lag(rsv, 2) over (partition by code order by load_date) as lag_2,
+lag(rsv, 3) over (partition by code order by load_date) as lag_3,
+lag(rsv, 4) over (partition by code order by load_date) as lag_4
+from temp_rsv) t;
+-------------------------------
+
+
+
+drop table if exists ki_median10;
+create temporary table ki_median10 as
+select code, date_index, case when cast(list as decimal(10,4)) >= 1.0 then 0.999 else cast(list as decimal(5,3)) end as ki from (
+select code, date_index, list, row_number() over (partition by code, date_index order by list) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	ki00, ki01, ki02, ki03, ki04, ki05, ki06, ki07, ki08, ki09)) as list from (
+select code, date_index, kind as ki00
+, lag(kind, 01) over (partition by code order by date_index) as ki01
+, lag(kind, 02) over (partition by code order by date_index) as ki02
+, lag(kind, 03) over (partition by code order by date_index) as ki03
+, lag(kind, 04) over (partition by code order by date_index) as ki04
+, lag(kind, 05) over (partition by code order by date_index) as ki05
+, lag(kind, 06) over (partition by code order by date_index) as ki06
+, lag(kind, 07) over (partition by code order by date_index) as ki07
+, lag(kind, 08) over (partition by code order by date_index) as ki08
+, lag(kind, 09) over (partition by code order by date_index) as ki09
+from temp_kind ) t where date_index not in (1,2,3,4,5,6,7,8,9) ) t ) t where row_number = 5;
+
+
+drop table if exists ki_median05;
+create temporary table ki_median05 as
+select code, date_index, case when cast(list as decimal(10,4)) >= 1.0 then 0.999 else cast(list as decimal(5,3)) end as ki from (
+select code, date_index, list, row_number() over (partition by code, date_index order by list) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	ki00, ki01, ki02, ki03, ki04)) as list from (
+select code, date_index, kind as ki00
+, lag(kind, 01) over (partition by code order by date_index) as ki01
+, lag(kind, 02) over (partition by code order by date_index) as ki02
+, lag(kind, 03) over (partition by code order by date_index) as ki03
+, lag(kind, 04) over (partition by code order by date_index) as ki04
+from temp_kind ) t where date_index not in (1,2,3,4) ) t ) t where row_number = 3;
+
+drop table if exists ki_median03;
+create temporary table ki_median03 as
+select code, date_index, case when cast(list as decimal(10,4)) >= 1.0 then 0.999 else cast(list as decimal(5,3)) end as ki from (
+select code, date_index, list, row_number() over (partition by code, date_index order by list) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	ki00, ki01, ki02)) as list from (
+select code, date_index, kind as ki00
+, lag(kind, 01) over (partition by code order by date_index) as ki01
+, lag(kind, 02) over (partition by code order by date_index) as ki02
+from temp_kind ) t where date_index not in (1,2) ) t ) t where row_number = 2;
+
+drop table if exists tempn;
+create temporary table tempn as
+select t.code, t.date_index, k1.ki as k03, k2.ki as k05, k3.ki as k10
+, cast((1/(1+EXP(0-(k1.ki/k2.ki*5-5))))  as decimal(5,3)) as devided_ki_0305
+, cast((1/(1+EXP(0-(k1.ki/k3.ki*5-5))))  as decimal(5,3)) as devided_ki_0310
+, cast((1/(1+EXP(0-(k2.ki/k3.ki*5-5))))  as decimal(5,3)) as devided_ki_0510
+from temp_kind t
+left join ki_median03 k1 on t.code = k1.code and t.date_index = k1.date_index
+left join ki_median05 k2 on t.code = k2.code and t.date_index = k2.date_index
+left join ki_median10 k3 on t.code = k3.code and t.date_index = k3.date_index;
+
+
+drop table if exists short_strength;
+create table short_strength as select code, load_date, date_index
+, r as short_strength,  reported_position as short_position
+, cast((1/(1+EXP(0-r*0.1))-0.5)*2 as decimal(6,3)) as strength_scaled
+, cast((1/(1+EXP(0-reported_position/5))-0.5)*2 as decimal(5,3) ) as position_scaled from (
+select short_position, average_volume, cast(short_position*1.000/average_volume as decimal(6,3)) as r,
+reported_position, code, load_date, date_index from transactions ) t ;
+
+drop table if exists short_calculation;
+create temporary table short_calculation as
+select code, load_date, date_index
+, json_build_array(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19) as idx20
+, json_build_array(0,1,2,3,4,5,6,7,8,9) as idx10
+, json_build_array(0,1,2,3,4) as idx05
+, json_build_array( (ss19 - ss19)/avgss , (ss18 - ss19)/avgss , (ss17 - ss19)/avgss
+, (ss16 - ss19)/avgss , (ss15 - ss19)/avgss , (ss14 - ss19)/avgss , (ss13 - ss19)/avgss
+, (ss12 - ss19)/avgss , (ss11 - ss19)/avgss , (ss10 - ss19)/avgss , (ss09 - ss19)/avgss
+, (ss08 - ss19)/avgss , (ss07 - ss19)/avgss , (ss06 - ss19)/avgss , (ss05 - ss19)/avgss
+, (ss04 - ss19)/avgss , (ss03 - ss19)/avgss , (ss02 - ss19)/avgss , (ss01 - ss19)/avgss
+, (ss00 - ss19)/avgss ) as ss20
+, json_build_array( (ss09 - ss09)/avgss , (ss08 - ss09)/avgss , (ss07 - ss09)/avgss
+, (ss06 - ss09)/avgss , (ss05 - ss09)/avgss , (ss04 - ss09)/avgss, (ss03 - ss09)/avgss
+, (ss02 - ss09)/avgss , (ss01 - ss09)/avgss , (ss00 - ss09)/avgss ) as ss10
+, json_build_array( (ss04 - ss04)/avgss , (ss03 - ss04)/avgss , (ss02 - ss04)/avgss
+, (ss01 - ss04)/avgss , (ss00 - ss04)/avgss ) as ss05
+, json_build_array( (sp19 - sp19)/avgsp , (sp18 - sp19)/avgsp , (sp17 - sp19)/avgsp
+, (sp16 - sp19)/avgsp , (sp15 - sp19)/avgsp , (sp14 - sp19)/avgsp, (sp13 - sp19)/avgsp
+, (sp12 - sp19)/avgsp , (sp11 - sp19)/avgsp , (sp10 - sp19)/avgsp , (sp09 - sp19)/avgsp
+, (sp08 - sp19)/avgsp , (sp07 - sp19)/avgsp , (sp06 - sp19)/avgsp , (sp05 - sp19)/avgsp
+, (sp04 - sp19)/avgsp , (sp03 - sp19)/avgsp , (sp02 - sp19)/avgsp , (sp01 - sp19)/avgsp
+, (sp00 - sp19)/avgsp ) as sp20
+, json_build_array( (sp09 - sp09)/avgsp , (sp08 - sp09)/avgsp , (sp07 - sp09)/avgsp
+, (sp06 - sp09)/avgsp , (sp05 - sp09)/avgsp , (sp04 - sp09)/avgsp, (sp03 - sp09)/avgsp
+, (sp02 - sp09)/avgsp , (sp01 - sp09)/avgsp , (sp00 - sp09)/avgsp ) as sp10
+, json_build_array( (sp04 - sp04)/avgsp , (sp03 - sp04)/avgsp , (sp02 - sp04)/avgsp
+, (sp01 - sp04)/avgsp , (sp00 - sp04)/avgsp ) as sp05
+from ( select *
+, case when ss00 + ss01 + ss02 + ss03 + ss04 + ss05 + ss06 + ss07 + ss08 + ss09
+	+ ss10 + ss11 + ss12 + ss13 + ss14 + ss15 + ss16 + ss17 + ss18 + ss19  = 0
+	then null else (ss00 + ss01 + ss02 + ss03 + ss04 + ss05 + ss06 + ss07 + ss08 + ss09
+	+ ss10 + ss11 + ss12 + ss13 + ss14 + ss15 + ss16 + ss17 + ss18 + ss19)/20 end as avgss
+, case when sp00 + sp01 + sp02 + sp03 + sp04 + sp05 + sp06 + sp07 + sp08 + sp09
+	+ sp10 + sp11 + sp12 + sp13 + sp14 + sp15 + sp16 + sp17 + sp18 + sp19  = 0
+	then null else (sp00 + sp01 + sp02 + sp03 + sp04 + sp05 + sp06 + sp07 + sp08 + sp09
+	+ sp10 + sp11 + sp12 + sp13 + sp14 + sp15 + sp16 + sp17 + sp18 + sp19)/20 end as avgsp
+from (select code, load_date, date_index, short_strength as ss00, short_position as sp00
+, lag(short_strength, 01) over( partition by code order by load_date) as ss01
+, lag(short_strength, 02) over( partition by code order by load_date) as ss02
+, lag(short_strength, 03) over( partition by code order by load_date) as ss03
+, lag(short_strength, 04) over( partition by code order by load_date) as ss04
+, lag(short_strength, 05) over( partition by code order by load_date) as ss05
+, lag(short_strength, 06) over( partition by code order by load_date) as ss06
+, lag(short_strength, 07) over( partition by code order by load_date) as ss07
+, lag(short_strength, 08) over( partition by code order by load_date) as ss08
+, lag(short_strength, 09) over( partition by code order by load_date) as ss09
+, lag(short_strength, 10) over( partition by code order by load_date) as ss10
+, lag(short_strength, 11) over( partition by code order by load_date) as ss11
+, lag(short_strength, 12) over( partition by code order by load_date) as ss12
+, lag(short_strength, 13) over( partition by code order by load_date) as ss13
+, lag(short_strength, 14) over( partition by code order by load_date) as ss14
+, lag(short_strength, 15) over( partition by code order by load_date) as ss15
+, lag(short_strength, 16) over( partition by code order by load_date) as ss16
+, lag(short_strength, 17) over( partition by code order by load_date) as ss17
+, lag(short_strength, 18) over( partition by code order by load_date) as ss18
+, lag(short_strength, 19) over( partition by code order by load_date) as ss19
+
+, lag(short_position, 01) over( partition by code order by load_date) as sp01
+, lag(short_position, 02) over( partition by code order by load_date) as sp02
+, lag(short_position, 03) over( partition by code order by load_date) as sp03
+, lag(short_position, 04) over( partition by code order by load_date) as sp04
+, lag(short_position, 05) over( partition by code order by load_date) as sp05
+, lag(short_position, 06) over( partition by code order by load_date) as sp06
+, lag(short_position, 07) over( partition by code order by load_date) as sp07
+, lag(short_position, 08) over( partition by code order by load_date) as sp08
+, lag(short_position, 09) over( partition by code order by load_date) as sp09
+, lag(short_position, 10) over( partition by code order by load_date) as sp10
+, lag(short_position, 11) over( partition by code order by load_date) as sp11
+, lag(short_position, 12) over( partition by code order by load_date) as sp12
+, lag(short_position, 13) over( partition by code order by load_date) as sp13
+, lag(short_position, 14) over( partition by code order by load_date) as sp14
+, lag(short_position, 15) over( partition by code order by load_date) as sp15
+, lag(short_position, 16) over( partition by code order by load_date) as sp16
+, lag(short_position, 17) over( partition by code order by load_date) as sp17
+, lag(short_position, 18) over( partition by code order by load_date) as sp18
+, lag(short_position, 19) over( partition by code order by load_date) as sp19
+
+from short_strength ) t ) t;
+
+
+
+drop table if exists ss20;
+create temporary table ss20 as
+select code, date_index, regr_slope(y,x) as s20, regr_intercept(y,x) as i20 from (
+select code, date_index
+     , cast(json_array_elements_text(idx20) as decimal (10,7)) as x
+     , cast(json_array_elements_text(ss20) as decimal (10,7)) as y
+from short_calculation ) t group by code, date_index ;
+
+drop table if exists ss10;
+create temporary table ss10 as
+select code, date_index, regr_slope(y,x) as s10, regr_intercept(y,x) as i10 from (
+select code, date_index
+     , cast(json_array_elements_text(idx10) as decimal (10,7)) as x
+     , cast(json_array_elements_text(ss10) as decimal (10,7)) as y
+from short_calculation ) t group by code, date_index ;
+
+drop table if exists ss05;
+create temporary table ss05 as
+select code, date_index, regr_slope(y,x) as s05, regr_intercept(y,x) as i05 from (
+select code, date_index
+     , cast(json_array_elements_text(idx05) as decimal (10,7)) as x
+     , cast(json_array_elements_text(ss05) as decimal (10,7)) as y
+from short_calculation ) t group by code, date_index ;
+
+
+drop table if exists sp20;
+create temporary table sp20 as
+select code, date_index, regr_slope(y,x) as s20, regr_intercept(y,x) as i20 from (
+select code, date_index
+     , cast(json_array_elements_text(idx20) as decimal (10,7)) as x
+     , cast(json_array_elements_text(sp20) as decimal (10,7)) as y
+from short_calculation ) t group by code, date_index ;
+
+drop table if exists sp10;
+create temporary table sp10 as
+select code, date_index, regr_slope(y,x) as s10, regr_intercept(y,x) as i10 from (
+select code, date_index
+     , cast(json_array_elements_text(idx10) as decimal (10,7)) as x
+     , cast(json_array_elements_text(sp10) as decimal (10,7)) as y
+from short_calculation ) t group by code, date_index ;
+
+drop table if exists sp05;
+create temporary table sp05 as
+select code, date_index, regr_slope(y,x) as s05, regr_intercept(y,x) as i05 from (
+select code, date_index
+     , cast(json_array_elements_text(idx05) as decimal (10,7)) as x
+     , cast(json_array_elements_text(sp05) as decimal (10,7)) as y
+from short_calculation ) t group by code, date_index ;
+
+drop table if exists temps;
+create table temps as
+select code, date_index, sp05, sp10, sp20, ss05, ss10, ss20
+, cast((1/(1+EXP(0-(sp05/sp10)))*2 -1)  as decimal(5,3)) as devided_slope_sp0510
+, cast((1/(1+EXP(0-(sp05/sp20)))*2 -1)  as decimal(5,3)) as devided_slope_sp0520
+, cast((1/(1+EXP(0-(sp10/sp20)))*2 -1)  as decimal(5,3)) as devided_slope_sp1020
+
+, cast((1/(1+EXP(0-(ss05/ss10)))*2 -1)  as decimal(5,3)) as devided_slope_ss0510
+, cast((1/(1+EXP(0-(ss05/ss20)))*2 -1)  as decimal(5,3)) as devided_slope_ss0520
+, cast((1/(1+EXP(0-(ss10/ss20)))*2 -1)  as decimal(5,3)) as devided_slope_ss1020
+
+from (select m.code, m.date_index
+, case when cast((1/(1+EXP(0-(t05.s05*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(t05.s05*50 )))) as decimal (5,3)) end as sp05
+, case when cast((1/(1+EXP(0-(t10.s10*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(t10.s10*50 )))) as decimal (5,3)) end as sp10
+, case when cast((1/(1+EXP(0-(t20.s20*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(t20.s20*50 )))) as decimal (5,3)) end as sp20
+, case when cast((1/(1+EXP(0-(s05.s05*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(s05.s05*50 )))) as decimal (5,3)) end as ss05
+, case when cast((1/(1+EXP(0-(s10.s10*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(s10.s10*50 )))) as decimal (5,3)) end as ss10
+, case when cast((1/(1+EXP(0-(s20.s20*50 )))) as decimal (5,3)) =0.0 then 0.001 else cast((1/(1+EXP(0-(s20.s20*50 )))) as decimal (5,3)) end as ss20
+from short_calculation m
+left join sp05 t05 on m.code = t05.code and m.date_index = t05.date_index
+left join sp10 t10 on m.code = t10.code and m.date_index = t10.date_index
+left join sp20 t20 on m.code = t20.code and m.date_index = t20.date_index
+left join ss05 s05 on m.code = s05.code and m.date_index = s05.date_index
+left join ss10 s10 on m.code = s10.code and m.date_index = s10.date_index
+left join ss20 s20 on m.code = s20.code and m.date_index = s20.date_index
+) t ;
+
+
+
+drop table if exists performance;
+create temporary table performance as
+select s.code, s.date_index, s.market_open as start_price,
+e.market_price as end_price
+from transactions s inner join transactions e
+on s.code = e.code and s.date_index = e.date_index -25;
+
+
+
+drop table if exists trainingset;
+create table trainingset as
+select idx.code, idx.date_index, idx.load_date, p.start_price, p.end_price
+,x.average_increase_ratio00
+,x.average_increase_ratio03
+,x.average_increase_ratio05
+,x.average_increase_ratio10
+,x.average_increase_ratio20
+,x.devided_avg_increase_ratio_0305
+,x.devided_avg_increase_ratio_0310
+,x.devided_avg_increase_ratio_0320
+,x.devided_avg_increase_ratio_0510
+,x.devided_avg_increase_ratio_0520
+,x.devided_avg_increase_ratio_1020
+, v.pe_cur
+, v.pe_mdn03
+, v.pe_mdn05
+, v.pe_mdn10
+, v.pe_mdn20
+, v.devided_mdn_pe_0305
+, v.devided_mdn_pe_0310
+, v.devided_mdn_pe_0320
+, v.devided_mdn_pe_0510
+, v.devided_mdn_pe_0520
+, v.devided_mdn_pe_1020
+, y.slope05
+, y.slope10
+, y.slope20
+, y.devided_slope_0510
+, y.devided_slope_0520
+, y.devided_slope_1020
+,z.pr00
+,z.pr_avg03
+,z.pr_avg05
+,z.pr_avg10
+,z.pr_avg20
+,z.devided_avg_price_ratio_0305
+,z.devided_avg_price_ratio_0310
+,z.devided_avg_price_ratio_0320
+,z.devided_avg_price_ratio_0510
+,z.devided_avg_price_ratio_0520
+,z.devided_avg_price_ratio_1020
+,m.strength00
+,m.strength05
+,m.strength10
+,m.strength20
+,m.devided_weight_strength_0005
+,m.devided_weight_strength_0010
+,m.devided_weight_strength_0020
+,m.devided_weight_strength_0510
+,m.devided_weight_strength_0520
+,m.devided_weight_strength_1020
+,n.k03
+,n.k05
+,n.k10
+,n.devided_ki_0305
+,n.devided_ki_0310
+,n.devided_ki_0510
+, s.sp05
+, s.sp10
+, s.sp20
+, s.ss05
+, s.ss10
+, s.ss20
+, s.devided_slope_sp0510
+, s.devided_slope_sp0520
+, s.devided_slope_sp1020
+, s.devided_slope_ss0510
+, s.devided_slope_ss0520
+, s.devided_slope_ss1020
+
+
+from transactions idx
+inner join performance p on idx.code = p.code and idx.date_index = p.date_index
+inner join tempx x on idx.code = x.code and idx.date_index = x.date_index
+inner join tempv v on idx.code = v.code and idx.date_index = v.date_index
+inner join tempy y on idx.code = y.code and idx.date_index = y.date_index
+inner join tempz z on idx.code = z.code and idx.date_index = z.date_index
+inner join tempm m on idx.code = m.code and idx.date_index = m.date_index
+inner join tempn n on idx.code = n.code and idx.date_index = n.date_index
+inner join temps s on idx.code = s.code and idx.date_index = s.date_index
+
+
+
+where (idx.date_index >= 1020  )
+or (idx.date_index >= 20  and idx.date_index < 1000)
+;
+
+
+select * from trainingset order by code ,date_index;
+
+--
+-- create table fix (
+--     Code varchar(50),
+--     Date varchar(50),
+--     Open varchar(50),
+--     High varchar(50),
+--     Low  varchar(50),
+--     Close varchar(50),
+--     Volume varchar(50)
+-- );
+--
+-- insert into fix select 'CCP.AX','2018-10-01','21.92','22.309999','21.68','21.73','133264' ;
+-- insert into fix select 'CCP.AX','2019-03-22','22.83','23.290001','22.83','23','111154' ;
+-- insert into fix select 'CCP.AX','2019-03-26','21.809999','22.049999','21.77','21.83','107874' ;
+-- insert into fix select 'AMA.AX','2019-03-25','1.01998','1.01998','0.99027','1.00018','837927' ;
+-- insert into fix select 'AMA.AX','2019-03-28','1.02493','1.04474','1.02493','1.04474','207320' ;
+-- insert into fix select 'AMA.AX','2019-02-18','0.88629','0.88629','0.86154','0.87639','231337' ;
+-- insert into fix select 'AMA.AX','2018-09-13','1.15862','1.16357','1.12891','1.13386','841639' ;
+-- insert into fix select 'AMA.AX','2019-03-14','0.95561','0.97047','0.95066','0.96552','105538' ;
+-- insert into fix select 'WHC.AX','2018-08-03','5.43','5.43','5.25','5.3','3809882' ;
+-- insert into fix select 'WHC.AX','2018-09-04','4.79','4.82','4.64','4.73','7174567' ;
+-- insert into fix select 'WHC.AX','2019-02-18','4.6','4.695','4.54','4.55','9257864' ;
+-- insert into fix select 'VCX.AX','2019-02-18','2.54','2.545','2.51','2.53','13193318' ;
+-- insert into fix select 'VCX.AX','2019-03-27','2.59','2.61','2.59','2.6','9495883' ;
+-- insert into fix select 'VCX.AX','2019-05-06','2.5','2.5','2.47','2.49','8295800' ;
+-- insert into fix select 'SYR.AX','2019-02-18','1.31488','1.31488','1.28285','1.29062','1513993' ;
+-- insert into fix select 'SPL.AX','2019-02-18','1.09','1.092','1.07','1.08','175924' ;
+-- insert into fix select 'SIG.AX','2018-10-12','0.55','0.582','0.545','0.56','3404209' ;
+-- insert into fix select 'SIG.AX','2019-03-27','0.525','0.535','0.52','0.535','1803407' ;
+-- insert into fix select 'RMD.AX','2019-02-18','14.1','14.11','13.93','14.02','1280777' ;
+-- insert into fix select 'PLS.AX','2019-02-18','0.67','0.672','0.66','0.67','2578787' ;
+-- insert into fix select 'PGH.AX','2018-08-22','4.33','4.33','4.13','4.14','1823837' ;
+-- insert into fix select 'PGH.AX','2019-02-18','3.09','3.13','3.05','3.07','1251362' ;
+-- insert into fix select 'ORE.AX','2019-02-18','3.09','3.12','3.04','3.07','1206487' ;
+-- insert into fix select 'NWL.AX','2019-02-18','7.2','7.505','6.94','7.49','426184' ;
+-- insert into fix select 'NGI.AX','2019-02-18','3.48','3.48','3.26','3.26','507962' ;
+-- insert into fix select 'INR.AX','2019-02-18','0.145','0.15','0.145','0.145','629128' ;
+-- insert into fix select 'IGO.AX','2019-03-22','4.88','4.92','4.77','4.79','1894110' ;
+-- insert into fix select 'HT1.AX','2018-10-05','2.2','2.26','2.06','2.2','365682' ;
+-- insert into fix select 'GXY.AX','2019-02-18','2.04','2.08','2','2.01','2468067' ;
+-- insert into fix select 'FXL.AX','2019-02-18','2.04','2.08','2','2.01','2468067' ;
+-- insert into fix select 'FAR.AX','2019-02-18','0.058','0.06','0.058','0.058','3806533' ;
+-- insert into fix select 'ELD.AX','2019-02-18','5.84725','5.9559','5.76824','5.91639','374205' ;
+-- insert into fix select 'CNU.AX','2019-03-22','5.53','5.56','5.49','5.52','303331' ;
+-- insert into fix select 'CLQ.AX','2019-02-18','0.34','0.35','0.31','0.315','1846114' ;
+-- insert into fix select 'CGF.AX','2018-08-31','11','11','10.83','10.83','2407492' ;
+-- insert into fix select 'CGF.AX','2019-02-18','7.48','7.51','7.34','7.36','1834498' ;
+-- insert into fix select 'CGF.AX','2019-02-26','8','8.17','7.95','8.04','2539959' ;
+-- insert into fix select 'CGC.AX','2019-03-13','5.29','5.29','5.17','5.2','2268908' ;
+-- insert into fix select 'CGC.AX','2019-02-18','5.06','5.17','5.03','5.11','1444257' ;
+-- insert into fix select 'CCL.AX','2018-08-27','9.31','9.415','9.19','9.22','3227218' ;
+-- insert into fix select 'CCL.AX','2019-02-26','8.01','8.09','7.9','7.94','1958859' ;
+-- insert into fix select 'CCL.AX','2019-03-25','8.36','8.48','8.33','8.41','1211514' ;
+-- insert into fix select 'BWX.AX','2019-02-18','1.53','1.58','1.53','1.56','318892' ;
+-- insert into fix select 'BOQ.AX','2018-10-24','10.1','10.18','9.95','9.96','2900312' ;
+-- insert into fix select 'BOQ.AX','2019-03-26','9.1','9.14','9.045','9.12','1274010' ;
+-- insert into fix select 'BGA.AX','2019-02-18','5.1','5.11','5','5.02','498629' ;
+-- insert into fix select 'BGA.AX','2019-03-25','4.69','4.69','4.5','4.52','1262334' ;
+-- insert into fix select 'ARQ.AX','2018-06-27','3.35','3.39','3.31','3.34','117949' ;
+-- insert into fix select 'ARQ.AX','2018-09-06','2.21','2.22','2.11','2.14','141448' ;
+-- insert into fix select 'ARQ.AX','2019-02-18','1.72','1.73','1.71','1.72','149258' ;
+-- insert into fix select 'ALG.AX','2019-03-27','1.18','1.19','1.13','1.175','2601148' ;
+-- insert into fix select 'AJM.AX','2019-02-18','0.135','0.14','0.13','0.135','3030996' ;
+-- insert into fix select 'AAC.AX','2019-02-18','0.93','0.935','0.915','0.92','2102858' ;
+-- drop table if exists fixclean ;
+-- create table fixclean as
+--     select Code, cast(Date as date) as load_date
+--            ,cast(cast(open as decimal(5,3)) as numeric) as open
+--            ,cast(cast(high as decimal(5,3)) as numeric)  as high
+--            ,cast(cast(low as decimal(5,3)) as numeric)  as low
+--            ,cast(cast(close as decimal(5,3)) as numeric)  as close
+--            ,cast(cast(volume as int) as numeric)  as volume
+-- from fix;
+--
+-- update transactions t
+-- set market_open = f.open
+-- from fixclean f
+-- where t.code = f.code
+-- and t.load_date  = f.load_date;
+--
+-- update transactions t
+-- set market_day_high = f.high
+-- from fixclean f
+-- where t.code = f.code
+-- and t.load_date  = f.load_date;
+--
+-- update transactions t
+-- set market_day_low = f.low
+-- from fixclean f
+-- where t.code = f.code
+-- and t.load_date  = f.load_date;
+--
+-- update transactions t
+-- set market_price = f.close
+-- from fixclean f
+-- where t.code = f.code
+-- and t.load_date  = f.load_date;
+--
+-- update transactions t
+-- set flag = 1
+-- from fixclean f
+-- where t.code = f.code
+-- and t.load_date  = f.load_date;
+--
+-- update transactions s
+-- set market_previous_close = a.market_price
+-- from ad_update a
+-- where s.code = a.code and s.date_index = a.date_index+1;
+--
+-- update transactions s
+-- set ask = a.ask
+-- from ad_update a
+-- where s.code = a.code and s.date_index = a.date_index+1;
+--
+-- update transactions s
+-- set bid = a.bid
+-- from ad_update a
+-- where s.code = a.code and s.date_index = a.date_index+1;
+
+/*
+select cast(kind as decimal(10,3)) , count(*) from temp_kind group by 1 order by 1 ;
+select * from temp_rsv where recent  < down;
+select * from transactions where code = 'CCP.AX' and load_date in ('2019-03-22', '2019-03-26') ;
+select mcode, load_date, cast((low-close)/close as decimal(15,3) ) as miss from (
+select  code as mcode, load_date, market_previous_close
+     , cast(lag(market_day_low, 1) over( partition by code order by load_date) as decimal(15,3)) as low
+     , cast(market_previous_close as decimal(15,3)) as close from transactions
+         ) t  where low > close and close <> 0 ;
+
+select * from transactions where code = 'CCP.AX' and date_index > 1024
+select * from transactions where code = 'A2M.AX' and date_index > 1045
+-- ----------------------------- --
+-- REMOVE EVERYTHING FOR 2019-04-25
+-- ----------------------------- --
+
+select * from fixclean;
+select t.*, s.* from transactions s
+right outer join (
+select c.* , t.date_index from fixclean c
+    left join transactions t on c.code = t.code  and c.load_date = t.load_date
+where  c.open <> t.market_open ) t
+on s.code = t.code and s.date_index = t.date_index
+order by t.code, t.date_index, s.date_index;
+select count(*) from fixclean;
+-- order by abs(open -market_open)/ market_open desc;
+select code, load_date,date_index, count(*) from (
+select c.* , t.date_index from fixclean c
+    left join transactions t on c.code = t.code  and c.load_date = t.load_date
+where  c.open <> t.market_open
+) t group by 1,2,3;
+alter table transactions add column flag int default  0;
+create temp table ad_update as
+select s.* from transactions s inner join
+(select code,load_date, date_index- 1 as idx  from transactions where flag  = 1)  t
+on s.code = t.code and s.date_index = t.idx;
+select * from ad_update;
+select c.* , t.* from fixclean c
+    left join transactions t on c.code = t.code  and c.load_date = t.load_date
+select * from transactions where code = 'ALG.AX' and date_index > 1027
+ */
