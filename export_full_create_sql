@@ -1,0 +1,41 @@
+-- Table: public.export_full_171113_200207
+
+-- DROP TABLE public.export_full_171113_200207;
+
+CREATE TABLE public.export_full_171113_200207
+(
+    code text COLLATE pg_catalog."default",
+    market_open numeric,
+    market_previous_close numeric,
+    market_day_high numeric,
+    market_day_low numeric,
+    market_price numeric,
+    market_volume numeric,
+    target_low_price numeric,
+    target_high_price numeric,
+    target_median_price numeric,
+    target_mean_price numeric,
+    recommendation_mean numeric,
+    number_of_analyst numeric,
+    tailing_pe numeric,
+    forward_pe numeric,
+    average_volume numeric,
+    ask numeric,
+    ask_size numeric,
+    bid numeric,
+    bid_size numeric,
+    short_position bigint,
+    total_in_issue bigint,
+    reported_position numeric,
+    mi_buy integer,
+    mi_hold integer,
+    mi_sell integer,
+    record_date date
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.export_full_171113_200207
+    OWNER to postgres;
