@@ -39,3 +39,7 @@ TABLESPACE pg_default;
 
 ALTER TABLE public.export_full_171113_200207
     OWNER to postgres;
+
+
+
+https://www.wsj.com/market-data/quotes/AU/XASX/ALG/historical-prices/download?num_rows=900&startDate=11/01/2017
