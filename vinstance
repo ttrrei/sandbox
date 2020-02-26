@@ -1,0 +1,141 @@
+-- View: public.v_instance
+
+-- DROP VIEW public.v_instance;
+
+CREATE OR REPLACE VIEW public.v_instance AS
+ SELECT temp.code,
+    temp.load_date,
+    temp.market_price,
+    temp.average_volume,
+    temp.pe_rank,
+    temp.target_ratio,
+    temp.recommend,
+    row_number() OVER (PARTITION BY temp.load_date ORDER BY (1.0::double precision + temp.pe_rank + (temp.recommend * 0.5)::double precision) DESC) AS ranking
+   FROM ( SELECT temp_1.code,
+            temp_1.load_date,
+            temp_1.market_price,
+            temp_1.average_volume,
+                CASE
+                    WHEN (1::double precision - temp_1.perank::double precision / 100::double precision) > 0::double precision THEN 1::double precision - temp_1.perank::double precision / 100::double precision
+                    ELSE 0::double precision
+                END AS pe_rank,
+                CASE
+                    WHEN temp_1.target_high_price IS NOT NULL AND temp_1.target_low_price IS NOT NULL AND temp_1.target_high_price <> temp_1.target_low_price THEN (temp_1.target_median_price - temp_1.target_low_price) / (temp_1.target_high_price - temp_1.target_low_price)
+                    ELSE 0::numeric
+                END AS target_ratio,
+                CASE
+                    WHEN temp_1.number_of_analyst IS NOT NULL AND temp_1.number_of_analyst >= 3::numeric THEN (5::numeric - temp_1.recommendation_mean) / 5::numeric
+                    ELSE 0::numeric
+                END AS recommend
+           FROM ( SELECT web_finance.code,
+                    COALESCE(
+                        CASE
+                            WHEN web_finance.market_open::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.market_open
+                        END,
+                        CASE
+                            WHEN web_finance.regular_market_open::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.regular_market_open
+                        END)::numeric AS market_open,
+                    COALESCE(
+                        CASE
+                            WHEN web_finance.market_previous_close::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.market_previous_close
+                        END,
+                        CASE
+                            WHEN web_finance.regular_market_previous_close::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.regular_market_previous_close
+                        END)::numeric AS market_previous_close,
+                    COALESCE(
+                        CASE
+                            WHEN web_finance.market_day_high::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.market_day_high
+                        END,
+                        CASE
+                            WHEN web_finance.regular_market_day_high::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.regular_market_day_high
+                        END)::numeric AS market_day_high,
+                    COALESCE(
+                        CASE
+                            WHEN web_finance.market_day_low::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.market_day_low
+                        END,
+                        CASE
+                            WHEN web_finance.regular_market_day_low::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.regular_market_day_low
+                        END)::numeric AS market_day_low,
+                    COALESCE(
+                        CASE
+                            WHEN web_finance.market_price::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.market_price
+                        END,
+                        CASE
+                            WHEN web_finance.current_price::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.current_price
+                        END)::numeric AS market_price,
+                    COALESCE(
+                        CASE
+                            WHEN web_finance.market_volume::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.market_volume
+                        END,
+                        CASE
+                            WHEN web_finance.regualr_market_volume::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.regualr_market_volume
+                        END)::numeric AS market_volume,
+                        CASE
+                            WHEN web_finance.target_low_price::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.target_low_price
+                        END::numeric AS target_low_price,
+                        CASE
+                            WHEN web_finance.target_high_price::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.target_high_price
+                        END::numeric AS target_high_price,
+                        CASE
+                            WHEN web_finance.target_median_price::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.target_median_price
+                        END::numeric AS target_median_price,
+                        CASE
+                            WHEN web_finance.target_mean_price::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.target_mean_price
+                        END::numeric AS target_mean_price,
+                        CASE
+                            WHEN web_finance.number_of_analyst::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.number_of_analyst
+                        END::numeric AS number_of_analyst,
+                        CASE
+                            WHEN web_finance.recommendation_mean::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.recommendation_mean
+                        END::numeric AS recommendation_mean,
+                        CASE
+                            WHEN web_finance.average_volume::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.average_volume
+                        END::numeric AS average_volume,
+                        CASE
+                            WHEN web_finance.ask::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.ask
+                        END::numeric AS ask,
+                        CASE
+                            WHEN web_finance.ask_size::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.ask_size
+                        END::numeric AS ask_size,
+                        CASE
+                            WHEN web_finance.bid::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.bid
+                        END::numeric AS bid,
+                        CASE
+                            WHEN web_finance.bid_size::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.bid_size
+                        END::numeric AS bid_size,
+                        CASE
+                            WHEN web_finance.profit_margins::text = ''::text THEN NULL::character varying
+                            ELSE web_finance.profit_margins
+                        END::numeric AS profit_margins,
+                    web_finance.sys_load_time::date AS load_date,
+                    row_number() OVER (PARTITION BY (web_finance.sys_load_time::date) ORDER BY (web_finance.forward_pe::numeric) DESC) AS perank
+                   FROM web_finance
+                  WHERE web_finance.forward_pe::text <> ''::text AND web_finance.forward_pe::text <> 'Infinity'::text AND web_finance.average_volume::text <> ''::text AND web_finance.average_volume::numeric > 50000::numeric) temp_1) temp
+  WHERE temp.target_ratio > 0.5;
+
+ALTER TABLE public.v_instance
+    OWNER TO iquant;
+
