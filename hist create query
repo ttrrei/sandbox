@@ -1,0 +1,21 @@
+-- Table: public.hist_171101
+
+-- DROP TABLE public.hist_171101;
+
+CREATE TABLE public.hist_171101
+(
+    code text COLLATE pg_catalog."default",
+    date text COLLATE pg_catalog."default",
+    open text COLLATE pg_catalog."default",
+    high text COLLATE pg_catalog."default",
+    low text COLLATE pg_catalog."default",
+    close text COLLATE pg_catalog."default",
+    volume text COLLATE pg_catalog."default"
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.hist_171101
+    OWNER to postgres;
