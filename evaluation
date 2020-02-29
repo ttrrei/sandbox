@@ -1,0 +1,153 @@
+drop table if exists org_consensus_index;
+create temp table org_consensus_index as select record_date , count(*)
+from public.export_full_171113_200207 where recommendation_mean is not null group by 1 having count(*) > 125 order by 1;
+drop table if exists mi_consensus_index;
+create temp table mi_consensus_index as select record_date, count(*),
+    row_number() over (order by record_date) as rank
+from  public.export_full_171113_200207 where mi_buy is not null group by 1 order by 1 ;
+
+drop table if exists full_date_index;
+create temp table full_date_index as select record_date, count(*) as count, row_number() over (order by record_date) as date_index
+from public.export_full_171113_200207 group by 1 order by 1;
+
+drop table if exists idx_export ;
+create temp table idx_export as select e.*, i.date_index ,
+        row_number() over (partition by e.record_date
+                order by case when e.forward_pe is null then 0 else e.forward_pe end desc) as pe_rank
+from public.export_full_171113_200207  e
+inner join full_date_index i on e.record_date = i.record_date;
+
+
+drop table if exists performance;
+create temp table performance as select s.code, s.record_date, s.date_index, s.market_open
+,cast(case when s.market_open is not null and s.market_open <> 0 then
+    (s.market_price - s.market_open ) / s.market_open else 0 end as decimal(5,3) )as ratio01
+-- ,cast(case when s.market_open is not null and s.market_open <> 0 then
+--     (e1.market_price - s.market_open ) / s.market_open else 0 end as decimal(5,3) )as ratio05
+-- ,cast(case when s.market_open is not null and s.market_open <> 0 then
+--     (e2.market_price - s.market_open ) / s.market_open else 0 end as decimal(5,3) )as ratio10
+-- ,cast(case when s.market_open is not null and s.market_open <> 0 then
+--     (e3.market_price - s.market_open ) / s.market_open else 0 end as decimal(5,3) )as ratio25
+from idx_export s
+-- inner join idx_export e1 on s.code = e1.code and s.date_index = e1.date_index - 4
+-- inner join idx_export e2 on s.code = e2.code and s.date_index = e2.date_index - 9
+-- inner join idx_export e3 on s.code = e3.code and s.date_index = e3.date_index - 24
+;
+
+select  record_date, count(*) from performance group by record_date order by record_date desc;
+
+drop table if exists testset_org;
+create temp table testset_org as
+select e.*, p.ratio01
+--        , p.ratio05, p.ratio10, p.ratio25
+from idx_export e inner join performance p
+on e.code = p.code and e.record_date = p.record_date
+inner join org_consensus_index o on e.record_date = o.record_date
+where e.code not in ( 'EHL.AX', 'SEA.AX')
+  and average_volume > 70000
+and
+      case when (target_high_price <= target_low_price) then 0 else
+      (target_median_price - target_low_price) / (target_high_price - target_low_price) end > 0.4
+;
+
+select max(record_date) from performance ;
+
+drop table if exists temp_cal;
+create temp table temp_cal as
+select code, record_date, date_index, pe_rank, recommendation_mean, number_of_analyst, ratio01,
+        case when pe_rank < 100 then (100 - pe_rank) / 100.0 else 0 end as pe,
+        case when number_of_analyst < 4 or recommendation_mean is null then 0 else (5 -recommendation_mean::decimal(5,3))/20 end as rec,
+row_number() over( partition by record_date order by
+    case when pe_rank < 100 then (100 - pe_rank) / 100.0 else 0 end
+        +
+    case when number_of_analyst < 4 or recommendation_mean is null then 0 else (5 -recommendation_mean::decimal(5,3))/40 end
+    desc ) as rec_rank
+from testset_org ;
+
+select * from temp_cal;
+
+select record_date, avg(1+ratio01) from temp_cal
+where   rec_rank <4
+group by 1 order by 1;
+
+drop table if exists mi_consensus_period;
+create temp table mi_consensus_period as
+select sd.record_date as start_date,i2.record_date as end_date
+, row_number() over( order by sd.record_date) as index
+from mi_consensus_index sd
+    inner join mi_consensus_index ed
+        on sd.rank= ed.rank -1
+    inner join full_date_index i1
+        on ed.record_date = i1.record_date
+    inner join full_date_index i2
+        on i1.date_index = i2.date_index + 1 ;
+
+
+select * from mi_consensus_period;
+
+select * from org_consensus_index i cross join mi_consensus_period p
+where i.record_date <=p.end_date and i.record_date >=p.start_date;
+
+drop table if exists testset_mi;
+create temp table testset_mi as
+select e1.code, e1.market_open, e2.market_price,  e1.pe_rank, e1.record_date,
+       e1.target_high_price, e1.target_low_price, e1.target_median_price, e1.average_volume,
+       e1.recommendation_mean as org_rec_mean, e1.number_of_analyst as org_rec_count,
+       e1.mi_buy, e1.mi_hold, e1.mi_sell,
+       case when (e1.mi_buy + e1.mi_hold + e1.mi_sell)  = 0 then 5 else
+       (e1.mi_buy*1.0 + e1.mi_hold*3.0 + e1.mi_sell*5.0) / (e1.mi_buy + e1.mi_hold + e1.mi_sell) end as recommendation_mean,
+       (e1.mi_buy + e1.mi_hold + e1.mi_sell) as number_of_analyst
+from idx_export e1
+inner join mi_consensus_period p
+on e1.record_date = p.start_date
+inner join idx_export e2
+on p.end_date = e2.record_date
+where e1.code  = e2.code and  e1.mi_buy is not null ;
+
+select * from testset_mi ;
+
+
+drop table if exists temp_cal;
+create temp table temp_cal as select *,
+    case when pe_rank < 100 then (100 - pe_rank) / 100.0 else 0 end as pe,
+    case when number_of_analyst < 4 or recommendation_mean is null then 0 else (5 -recommendation_mean::decimal(5,3))/20 end as rec,
+    row_number() over( partition by record_date order by
+        case when pe_rank < 100 then (100 - pe_rank) / 100.0 else 0 end
+            +
+        case when number_of_analyst < 4 or recommendation_mean is null then 0 else (5 -recommendation_mean::decimal(5,3))/40 end
+        desc) as mi_rec_rank
+    , row_number() over( partition by record_date order by
+        case when pe_rank < 100 then (100 - pe_rank) / 100.0 else 0 end
+            +
+        case when org_rec_count < 4 or org_rec_mean is null then 0 else (5 -org_rec_mean::decimal(5,3))/40 end
+        desc) as org_rec_rank
+from testset_mi
+where
+ average_volume > 70000
+and
+      case when (target_high_price <= target_low_price) then 0 else
+      (target_median_price - target_low_price) / (target_high_price - target_low_price) end > 0.4;
+
+
+
+select record_date,  avg(market_price/market_open)
+from (select *
+    , row_number() over ( partition by record_date order by (mi_rec_rank*0.5 + org_rec_rank*1.5)/2.0, mi_rec_rank) as arank
+from temp_cal ) t where arank < 4
+group by 1 order by 1;
+
+
+
+
+
+
+select * from (select  *, row_number() over (partition by record_date order by mi_rec_rank) as ind
+from temp_cal where org_rec_rank < 10 ) t
+group by 1 order by 1;
+
+
+
+select * from mi_consensus_period;
+
+
+select * from full_date_index;
