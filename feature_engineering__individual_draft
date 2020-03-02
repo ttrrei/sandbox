@@ -1,7 +1,3 @@
-select * from transactions limit 100;
-
-
-
 drop table if exists increase_ratio;
 create temporary table increase_ratio as
 select code, date_index, increase_ratio,
@@ -198,7 +194,7 @@ select code, date_index, forward_pe as pe00
 from pe_rank ) t where date_index not in (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19) ) t ) t where row_number = 10;
 
 drop table if exists tempv;
-create table tempv as
+create temp table tempv as
 select code, date_index, case when pe_cur = 0.0 then 0.001 else pe_cur end as pe_cur, pe_mdn03,pe_mdn05,pe_mdn10,pe_mdn20
 , cast((1/(1+EXP(0-(pe0305-1)*80))) as decimal(5,3)) as devided_mdn_pe_0305
 , cast((1/(1+EXP(0-(pe0310-1)*80))) as decimal(5,3)) as devided_mdn_pe_0310
@@ -303,7 +299,7 @@ select code, date_index
 from mp_calculation ) t group by code, date_index ;
 
 drop table if exists tempy;
-create table tempy as
+create temporary table tempy as
 select code, date_index, s05 as slope05, s10 as slope10, s20 as slope20
 , cast((1/(1+EXP(0-(s05/s10)))*2 -1)  as decimal(5,3)) as devided_slope_0510
 , cast((1/(1+EXP(0-(s05/s20)))*2 -1)  as decimal(5,3)) as devided_slope_0520
@@ -380,7 +376,7 @@ market_volume * (market_price - market_previous_close)/market_previous_close as 
 from transactions where market_previous_close <> 0 and  market_previous_close is not null;
 
 drop table if exists temp_strength;
-create table temp_strength as
+create temporary table temp_strength as
 select t00.code, t00.date_index , t00.strength/t00.average_volume as current_strength
 , (t00.strength*5 + t01.strength*4 + t02.strength*3 + t03.strength*2 + t04.strength*1)/15/t00.average_volume as back05
 , (t00.strength*10 + t01.strength*9 + t02.strength*8 + t03.strength*7 + t04.strength*6
@@ -522,7 +518,7 @@ left join ki_median10 k3 on t.code = k3.code and t.date_index = k3.date_index;
 
 
 drop table if exists short_strength;
-create table short_strength as select code, load_date, date_index
+create temporary table short_strength as select code, load_date, date_index
 , r as short_strength,  reported_position as short_position
 , cast((1/(1+EXP(0-r*0.1))-0.5)*2 as decimal(6,3)) as strength_scaled
 , cast((1/(1+EXP(0-reported_position/5))-0.5)*2 as decimal(5,3) ) as position_scaled from (
@@ -661,7 +657,7 @@ select code, date_index
 from short_calculation ) t group by code, date_index ;
 
 drop table if exists temps;
-create table temps as
+create temp table temps as
 select code, date_index, sp05, sp10, sp20, ss05, ss10, ss20
 , cast((1/(1+EXP(0-(sp05/sp10)))*2 -1)  as decimal(5,3)) as devided_slope_sp0510
 , cast((1/(1+EXP(0-(sp05/sp20)))*2 -1)  as decimal(5,3)) as devided_slope_sp0520
@@ -769,7 +765,6 @@ select idx.code, idx.date_index, idx.load_date, p.start_price, p.end_price
 , s.devided_slope_ss0520
 , s.devided_slope_ss1020
 
-
 from transactions idx
 inner join performance p on idx.code = p.code and idx.date_index = p.date_index
 inner join tempx x on idx.code = x.code and idx.date_index = x.date_index
@@ -780,172 +775,5 @@ inner join tempm m on idx.code = m.code and idx.date_index = m.date_index
 inner join tempn n on idx.code = n.code and idx.date_index = n.date_index
 inner join temps s on idx.code = s.code and idx.date_index = s.date_index
 
-
-
 where (idx.date_index >= 1020  )
-or (idx.date_index >= 20  and idx.date_index < 1000)
-;
-
-
-select * from trainingset order by code ,date_index;
-
---
--- create table fix (
---     Code varchar(50),
---     Date varchar(50),
---     Open varchar(50),
---     High varchar(50),
---     Low  varchar(50),
---     Close varchar(50),
---     Volume varchar(50)
--- );
---
--- insert into fix select 'CCP.AX','2018-10-01','21.92','22.309999','21.68','21.73','133264' ;
--- insert into fix select 'CCP.AX','2019-03-22','22.83','23.290001','22.83','23','111154' ;
--- insert into fix select 'CCP.AX','2019-03-26','21.809999','22.049999','21.77','21.83','107874' ;
--- insert into fix select 'AMA.AX','2019-03-25','1.01998','1.01998','0.99027','1.00018','837927' ;
--- insert into fix select 'AMA.AX','2019-03-28','1.02493','1.04474','1.02493','1.04474','207320' ;
--- insert into fix select 'AMA.AX','2019-02-18','0.88629','0.88629','0.86154','0.87639','231337' ;
--- insert into fix select 'AMA.AX','2018-09-13','1.15862','1.16357','1.12891','1.13386','841639' ;
--- insert into fix select 'AMA.AX','2019-03-14','0.95561','0.97047','0.95066','0.96552','105538' ;
--- insert into fix select 'WHC.AX','2018-08-03','5.43','5.43','5.25','5.3','3809882' ;
--- insert into fix select 'WHC.AX','2018-09-04','4.79','4.82','4.64','4.73','7174567' ;
--- insert into fix select 'WHC.AX','2019-02-18','4.6','4.695','4.54','4.55','9257864' ;
--- insert into fix select 'VCX.AX','2019-02-18','2.54','2.545','2.51','2.53','13193318' ;
--- insert into fix select 'VCX.AX','2019-03-27','2.59','2.61','2.59','2.6','9495883' ;
--- insert into fix select 'VCX.AX','2019-05-06','2.5','2.5','2.47','2.49','8295800' ;
--- insert into fix select 'SYR.AX','2019-02-18','1.31488','1.31488','1.28285','1.29062','1513993' ;
--- insert into fix select 'SPL.AX','2019-02-18','1.09','1.092','1.07','1.08','175924' ;
--- insert into fix select 'SIG.AX','2018-10-12','0.55','0.582','0.545','0.56','3404209' ;
--- insert into fix select 'SIG.AX','2019-03-27','0.525','0.535','0.52','0.535','1803407' ;
--- insert into fix select 'RMD.AX','2019-02-18','14.1','14.11','13.93','14.02','1280777' ;
--- insert into fix select 'PLS.AX','2019-02-18','0.67','0.672','0.66','0.67','2578787' ;
--- insert into fix select 'PGH.AX','2018-08-22','4.33','4.33','4.13','4.14','1823837' ;
--- insert into fix select 'PGH.AX','2019-02-18','3.09','3.13','3.05','3.07','1251362' ;
--- insert into fix select 'ORE.AX','2019-02-18','3.09','3.12','3.04','3.07','1206487' ;
--- insert into fix select 'NWL.AX','2019-02-18','7.2','7.505','6.94','7.49','426184' ;
--- insert into fix select 'NGI.AX','2019-02-18','3.48','3.48','3.26','3.26','507962' ;
--- insert into fix select 'INR.AX','2019-02-18','0.145','0.15','0.145','0.145','629128' ;
--- insert into fix select 'IGO.AX','2019-03-22','4.88','4.92','4.77','4.79','1894110' ;
--- insert into fix select 'HT1.AX','2018-10-05','2.2','2.26','2.06','2.2','365682' ;
--- insert into fix select 'GXY.AX','2019-02-18','2.04','2.08','2','2.01','2468067' ;
--- insert into fix select 'FXL.AX','2019-02-18','2.04','2.08','2','2.01','2468067' ;
--- insert into fix select 'FAR.AX','2019-02-18','0.058','0.06','0.058','0.058','3806533' ;
--- insert into fix select 'ELD.AX','2019-02-18','5.84725','5.9559','5.76824','5.91639','374205' ;
--- insert into fix select 'CNU.AX','2019-03-22','5.53','5.56','5.49','5.52','303331' ;
--- insert into fix select 'CLQ.AX','2019-02-18','0.34','0.35','0.31','0.315','1846114' ;
--- insert into fix select 'CGF.AX','2018-08-31','11','11','10.83','10.83','2407492' ;
--- insert into fix select 'CGF.AX','2019-02-18','7.48','7.51','7.34','7.36','1834498' ;
--- insert into fix select 'CGF.AX','2019-02-26','8','8.17','7.95','8.04','2539959' ;
--- insert into fix select 'CGC.AX','2019-03-13','5.29','5.29','5.17','5.2','2268908' ;
--- insert into fix select 'CGC.AX','2019-02-18','5.06','5.17','5.03','5.11','1444257' ;
--- insert into fix select 'CCL.AX','2018-08-27','9.31','9.415','9.19','9.22','3227218' ;
--- insert into fix select 'CCL.AX','2019-02-26','8.01','8.09','7.9','7.94','1958859' ;
--- insert into fix select 'CCL.AX','2019-03-25','8.36','8.48','8.33','8.41','1211514' ;
--- insert into fix select 'BWX.AX','2019-02-18','1.53','1.58','1.53','1.56','318892' ;
--- insert into fix select 'BOQ.AX','2018-10-24','10.1','10.18','9.95','9.96','2900312' ;
--- insert into fix select 'BOQ.AX','2019-03-26','9.1','9.14','9.045','9.12','1274010' ;
--- insert into fix select 'BGA.AX','2019-02-18','5.1','5.11','5','5.02','498629' ;
--- insert into fix select 'BGA.AX','2019-03-25','4.69','4.69','4.5','4.52','1262334' ;
--- insert into fix select 'ARQ.AX','2018-06-27','3.35','3.39','3.31','3.34','117949' ;
--- insert into fix select 'ARQ.AX','2018-09-06','2.21','2.22','2.11','2.14','141448' ;
--- insert into fix select 'ARQ.AX','2019-02-18','1.72','1.73','1.71','1.72','149258' ;
--- insert into fix select 'ALG.AX','2019-03-27','1.18','1.19','1.13','1.175','2601148' ;
--- insert into fix select 'AJM.AX','2019-02-18','0.135','0.14','0.13','0.135','3030996' ;
--- insert into fix select 'AAC.AX','2019-02-18','0.93','0.935','0.915','0.92','2102858' ;
--- drop table if exists fixclean ;
--- create table fixclean as
---     select Code, cast(Date as date) as load_date
---            ,cast(cast(open as decimal(5,3)) as numeric) as open
---            ,cast(cast(high as decimal(5,3)) as numeric)  as high
---            ,cast(cast(low as decimal(5,3)) as numeric)  as low
---            ,cast(cast(close as decimal(5,3)) as numeric)  as close
---            ,cast(cast(volume as int) as numeric)  as volume
--- from fix;
---
--- update transactions t
--- set market_open = f.open
--- from fixclean f
--- where t.code = f.code
--- and t.load_date  = f.load_date;
---
--- update transactions t
--- set market_day_high = f.high
--- from fixclean f
--- where t.code = f.code
--- and t.load_date  = f.load_date;
---
--- update transactions t
--- set market_day_low = f.low
--- from fixclean f
--- where t.code = f.code
--- and t.load_date  = f.load_date;
---
--- update transactions t
--- set market_price = f.close
--- from fixclean f
--- where t.code = f.code
--- and t.load_date  = f.load_date;
---
--- update transactions t
--- set flag = 1
--- from fixclean f
--- where t.code = f.code
--- and t.load_date  = f.load_date;
---
--- update transactions s
--- set market_previous_close = a.market_price
--- from ad_update a
--- where s.code = a.code and s.date_index = a.date_index+1;
---
--- update transactions s
--- set ask = a.ask
--- from ad_update a
--- where s.code = a.code and s.date_index = a.date_index+1;
---
--- update transactions s
--- set bid = a.bid
--- from ad_update a
--- where s.code = a.code and s.date_index = a.date_index+1;
-
-/*
-select cast(kind as decimal(10,3)) , count(*) from temp_kind group by 1 order by 1 ;
-select * from temp_rsv where recent  < down;
-select * from transactions where code = 'CCP.AX' and load_date in ('2019-03-22', '2019-03-26') ;
-select mcode, load_date, cast((low-close)/close as decimal(15,3) ) as miss from (
-select  code as mcode, load_date, market_previous_close
-     , cast(lag(market_day_low, 1) over( partition by code order by load_date) as decimal(15,3)) as low
-     , cast(market_previous_close as decimal(15,3)) as close from transactions
-         ) t  where low > close and close <> 0 ;
-
-select * from transactions where code = 'CCP.AX' and date_index > 1024
-select * from transactions where code = 'A2M.AX' and date_index > 1045
--- ----------------------------- --
--- REMOVE EVERYTHING FOR 2019-04-25
--- ----------------------------- --
-
-select * from fixclean;
-select t.*, s.* from transactions s
-right outer join (
-select c.* , t.date_index from fixclean c
-    left join transactions t on c.code = t.code  and c.load_date = t.load_date
-where  c.open <> t.market_open ) t
-on s.code = t.code and s.date_index = t.date_index
-order by t.code, t.date_index, s.date_index;
-select count(*) from fixclean;
--- order by abs(open -market_open)/ market_open desc;
-select code, load_date,date_index, count(*) from (
-select c.* , t.date_index from fixclean c
-    left join transactions t on c.code = t.code  and c.load_date = t.load_date
-where  c.open <> t.market_open
-) t group by 1,2,3;
-alter table transactions add column flag int default  0;
-create temp table ad_update as
-select s.* from transactions s inner join
-(select code,load_date, date_index- 1 as idx  from transactions where flag  = 1)  t
-on s.code = t.code and s.date_index = t.idx;
-select * from ad_update;
-select c.* , t.* from fixclean c
-    left join transactions t on c.code = t.code  and c.load_date = t.load_date
-select * from transactions where code = 'ALG.AX' and date_index > 1027
- */
+or (idx.date_index >= 20  and idx.date_index < 1000);
