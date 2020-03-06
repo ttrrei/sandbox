@@ -1,0 +1,103 @@
+create function feature_mp() returns void
+    language plpgsql
+as
+$$
+BEGIN
+
+drop table if exists mp_calculation;
+create temporary table mp_calculation as
+select code, date_index
+, json_build_array(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19) as idx20
+, json_build_array(0,1,2,3,4,5,6,7,8,9) as idx10
+, json_build_array(0,1,2,3,4) as idx05
+, json_build_array(
+  (mp19 - mp19)/avgmp , (mp18 - mp19)/avgmp , (mp17 - mp19)/avgmp
+, (mp16 - mp19)/avgmp , (mp15 - mp19)/avgmp , (mp14 - mp19)/avgmp
+, (mp13 - mp19)/avgmp , (mp12 - mp19)/avgmp , (mp11 - mp19)/avgmp
+, (mp10 - mp19)/avgmp , (mp09 - mp19)/avgmp , (mp08 - mp19)/avgmp
+, (mp07 - mp19)/avgmp , (mp06 - mp19)/avgmp , (mp05 - mp19)/avgmp
+, (mp04 - mp19)/avgmp , (mp03 - mp19)/avgmp , (mp02 - mp19)/avgmp
+, (mp01 - mp19)/avgmp , (mp00 - mp19)/avgmp ) as list20
+, json_build_array(
+  (mp09 - mp09)/avgmp , (mp08 - mp09)/avgmp , (mp07 - mp09)/avgmp
+, (mp06 - mp09)/avgmp , (mp05 - mp09)/avgmp , (mp04 - mp09)/avgmp
+, (mp03 - mp09)/avgmp , (mp02 - mp09)/avgmp , (mp01 - mp09)/avgmp
+, (mp00 - mp09)/avgmp ) as list10
+, json_build_array(
+  (mp04 - mp04)/avgmp , (mp03 - mp04)/avgmp , (mp02 - mp04)/avgmp
+, (mp01 - mp04)/avgmp , (mp00 - mp04)/avgmp ) as list05 from
+(select case when mp00 + mp01 + mp02 + mp03 + mp04 + mp05 + mp06 + mp07 + mp08 + mp09
+	+ mp10 + mp11 + mp12 + mp13 + mp14 + mp15 + mp16 + mp17 + mp18 + mp19  = 0
+	then null else (mp00 + mp01 + mp02 + mp03 + mp04 + mp05 + mp06 + mp07 + mp08 + mp09
+	+ mp10 + mp11 + mp12 + mp13 + mp14 + mp15 + mp16 + mp17 + mp18 + mp19)/20 end as avgmp
+, * from ( select code, date_index, market_price as mp00
+, lag(market_price, 01) over( partition by code order by date_index) as mp01
+, lag(market_price, 02) over( partition by code order by date_index) as mp02
+, lag(market_price, 03) over( partition by code order by date_index) as mp03
+, lag(market_price, 04) over( partition by code order by date_index) as mp04
+, lag(market_price, 05) over( partition by code order by date_index) as mp05
+, lag(market_price, 06) over( partition by code order by date_index) as mp06
+, lag(market_price, 07) over( partition by code order by date_index) as mp07
+, lag(market_price, 08) over( partition by code order by date_index) as mp08
+, lag(market_price, 09) over( partition by code order by date_index) as mp09
+, lag(market_price, 10) over( partition by code order by date_index) as mp10
+, lag(market_price, 11) over( partition by code order by date_index) as mp11
+, lag(market_price, 12) over( partition by code order by date_index) as mp12
+, lag(market_price, 13) over( partition by code order by date_index) as mp13
+, lag(market_price, 14) over( partition by code order by date_index) as mp14
+, lag(market_price, 15) over( partition by code order by date_index) as mp15
+, lag(market_price, 16) over( partition by code order by date_index) as mp16
+, lag(market_price, 17) over( partition by code order by date_index) as mp17
+, lag(market_price, 18) over( partition by code order by date_index) as mp18
+, lag(market_price, 19) over( partition by code order by date_index) as mp19
+from full_transactions ) t ) t ;
+
+drop table if exists temp20;
+create temporary table temp20 as
+select code, date_index, regr_slope(y,x) as s20
+     , row_number() over(partition by date_index order by regr_slope(y,x) desc) as slope_rank
+     , regr_intercept(y,x) as i20 from (
+select code, date_index
+     , cast(json_array_elements_text(idx20) as decimal (10,7)) as x
+     , cast(json_array_elements_text(list20) as decimal (10,7)) as y
+from mp_calculation ) t group by code, date_index ;
+
+drop table if exists temp10;
+create temporary table temp10 as
+select code, date_index, regr_slope(y,x) as s10
+     , row_number() over(partition by date_index order by regr_slope(y,x) desc) as slope_rank
+     , regr_intercept(y,x) as i10 from (
+select code, date_index
+     , cast(json_array_elements_text(idx10) as decimal (10,7)) as x
+     , cast(json_array_elements_text(list10) as decimal (10,7)) as y
+from mp_calculation ) t group by code, date_index ;
+
+drop table if exists temp05;
+create temporary table temp05 as
+select code, date_index, regr_slope(y,x) as s05
+     , row_number() over(partition by date_index order by regr_slope(y,x) desc) as slope_rank
+     , regr_intercept(y,x) as i05 from (
+select code, date_index
+     , cast(json_array_elements_text(idx05) as decimal (10,7)) as x
+     , cast(json_array_elements_text(list05) as decimal (10,7)) as y
+from mp_calculation ) t group by code, date_index ;
+
+drop table if exists feature_mp;
+create temporary table feature_mp as
+select t.code, t.record_date, t.date_index
+,temp05.s05 as slope_value_05,  temp05.slope_rank as slope_rank_05
+,temp10.s10 as slope_value_10,  temp10.slope_rank as slope_rank_10
+,temp20.s20 as slope_value_20,  temp20.slope_rank as slope_rank_20
+from full_transactions t
+left join temp05
+on t.code = temp05.code and t.date_index = temp05.date_index
+left join temp10
+on t.code = temp10.code and t.date_index = temp10.date_index
+left join temp20
+on t.code = temp20.code and t.date_index = temp20.date_index ;
+END
+
+$$;
+
+alter function feature_mp() owner to postgres;
+
