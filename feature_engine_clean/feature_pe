@@ -1,0 +1,105 @@
+create function feature_pe() returns void
+    language plpgsql
+as
+$$
+BEGIN
+
+drop table if exists pe_rank;
+create temporary table pe_rank as
+select code, date_index, case when  forward_pe is null then -999 else forward_pe end as forward_pe,
+row_number() over(partition by date_index order by case when forward_pe is null then -999 else forward_pe end desc) as rank
+from full_transactions t
+order by 2 , 3 desc;
+
+drop table if exists pe_median03;
+create temporary table pe_median03 as
+select code, date_index, list as mdn_pe_vl_03, row_number() over (partition by date_index order by list desc ) as mdn_pe_rk_03 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( pe00, pe01, pe02)) as list from (
+select code, date_index, forward_pe as pe00
+, lag(forward_pe, 01) over (partition by code order by date_index) as pe01
+, lag(forward_pe, 02) over (partition by code order by date_index) as pe02
+from pe_rank ) t ) t ) t where row_number = 2;
+
+drop table if exists pe_median05;
+create temporary table pe_median05 as
+select code, date_index, list as mdn_pe_vl_05, row_number() over (partition by date_index order by list desc ) as mdn_pe_rk_05 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( pe00, pe01, pe02, pe03,pe04)) as list from (
+select code, date_index, forward_pe as pe00
+, lag(forward_pe, 01) over (partition by code order by date_index) as pe01
+, lag(forward_pe, 02) over (partition by code order by date_index) as pe02
+, lag(forward_pe, 03) over (partition by code order by date_index) as pe03
+, lag(forward_pe, 04) over (partition by code order by date_index) as pe04
+from pe_rank ) t ) t ) t where row_number = 3;
+
+drop table if exists pe_median10;
+create temporary table pe_median10 as
+select code, date_index, list as mdn_pe_vl_10, row_number() over (partition by date_index order by list desc ) as mdn_pe_rk_10 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( pe00, pe01, pe02, pe03, pe04, pe05, pe06, pe07, pe08, pe09)) as list from (
+select code, date_index, forward_pe as pe00
+, lag(forward_pe, 01) over (partition by code order by date_index) as pe01
+, lag(forward_pe, 02) over (partition by code order by date_index) as pe02
+, lag(forward_pe, 03) over (partition by code order by date_index) as pe03
+, lag(forward_pe, 04) over (partition by code order by date_index) as pe04
+, lag(forward_pe, 05) over (partition by code order by date_index) as pe05
+, lag(forward_pe, 06) over (partition by code order by date_index) as pe06
+, lag(forward_pe, 07) over (partition by code order by date_index) as pe07
+, lag(forward_pe, 08) over (partition by code order by date_index) as pe08
+, lag(forward_pe, 09) over (partition by code order by date_index) as pe09
+from pe_rank ) t ) t ) t where row_number = 5;
+
+drop table if exists pe_median20;
+create temporary table pe_median20 as
+select code, date_index, list as mdn_pe_vl_20, row_number() over (partition by date_index order by list desc ) as mdn_pe_rk_20 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	pe00, pe01, pe02, pe03, pe04, pe05, pe06, pe07, pe08, pe09
+   ,pe10, pe11, pe12, pe13, pe14, pe15, pe16, pe17, pe18, pe19)) as list from (
+select code, date_index, forward_pe as pe00
+, lag(forward_pe, 01) over (partition by code order by date_index) as pe01
+, lag(forward_pe, 02) over (partition by code order by date_index) as pe02
+, lag(forward_pe, 03) over (partition by code order by date_index) as pe03
+, lag(forward_pe, 04) over (partition by code order by date_index) as pe04
+, lag(forward_pe, 05) over (partition by code order by date_index) as pe05
+, lag(forward_pe, 06) over (partition by code order by date_index) as pe06
+, lag(forward_pe, 07) over (partition by code order by date_index) as pe07
+, lag(forward_pe, 08) over (partition by code order by date_index) as pe08
+, lag(forward_pe, 09) over (partition by code order by date_index) as pe09
+, lag(forward_pe, 10) over (partition by code order by date_index) as pe10
+, lag(forward_pe, 11) over (partition by code order by date_index) as pe11
+, lag(forward_pe, 12) over (partition by code order by date_index) as pe12
+, lag(forward_pe, 13) over (partition by code order by date_index) as pe13
+, lag(forward_pe, 14) over (partition by code order by date_index) as pe14
+, lag(forward_pe, 15) over (partition by code order by date_index) as pe15
+, lag(forward_pe, 16) over (partition by code order by date_index) as pe16
+, lag(forward_pe, 17) over (partition by code order by date_index) as pe17
+, lag(forward_pe, 18) over (partition by code order by date_index) as pe18
+, lag(forward_pe, 19) over (partition by code order by date_index) as pe19
+from pe_rank ) t ) t ) t where row_number = 10;
+
+drop table if exists feature_pe;
+create temp table feature_pe as
+select t.code, t.record_date, t.date_index
+,m03.mdn_pe_vl_03, m03.mdn_pe_rk_03
+,m05.mdn_pe_vl_05, m05.mdn_pe_rk_05
+,m10.mdn_pe_vl_10, m10.mdn_pe_rk_10
+,m20.mdn_pe_vl_20, m20.mdn_pe_rk_20
+
+from full_transactions t
+left join pe_median03 m03
+    on t.code = m03.code and t.date_index = m03.date_index
+left join pe_median05 m05
+    on t.code = m05.code and t.date_index = m05.date_index
+left join pe_median10 m10
+    on t.code = m10.code and t.date_index = m10.date_index
+left join pe_median20 m20
+    on t.code = m20.code and t.date_index = m20.date_index;
+
+END
+
+$$;
+
+alter function feature_pe() owner to postgres;
+
