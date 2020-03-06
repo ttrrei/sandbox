@@ -1,0 +1,282 @@
+create function feature_ir() returns void
+    language plpgsql
+as
+$$
+BEGIN
+drop table if exists daily_increase_ratio;
+create temporary table daily_increase_ratio as
+select code, date_index, increase_ratio,
+row_number() over(partition by date_index order by increase_ratio desc) as rank from (
+select code, date_index,
+case when cast(market_open*100 as decimal(10,4))> 0
+then (cast(market_price as numeric) - cast(market_open as numeric))*100/cast(market_open as numeric)
+else -100 end as increase_ratio
+from full_transactions ) t;
+
+drop table if exists irv_median03;
+create temp table irv_median03 as
+select code, date_index, cast(list as decimal(7,4)) as mdn_irv_vl_03
+,   row_number() over (partition by date_index order by
+        case when list is null then -100 else list end  desc ) mdn_irv_rk_03 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ir00, ir01, ir02)) as list from (
+select code, date_index, increase_ratio as ir00
+, lag(increase_ratio, 01) over (partition by code order by date_index) as ir01
+, lag(increase_ratio, 02) over (partition by code order by date_index) as ir02
+from daily_increase_ratio ) t )t ) t where row_number = 2 ;
+
+drop table if exists irr_median03;
+create temp table irr_median03 as
+select code, date_index, cast(list as decimal(7,4)) as mdn_irr_vl_03
+,   row_number() over (partition by date_index order by
+        case when list is null then -100 else list end ) mdn_irr_rk_03 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ir00, ir01, ir02)) as list from (
+select code, date_index, rank as ir00
+, lag(rank, 01) over (partition by code order by date_index) as ir01
+, lag(rank, 02) over (partition by code order by date_index) as ir02
+from daily_increase_ratio ) t )t ) t where row_number = 2 ;
+
+drop table if exists irv_median05;
+create temp table irv_median05 as
+select code, date_index, cast(list as decimal(7,4)) as mdn_irv_vl_05
+,   row_number() over (partition by date_index order by
+        case when list is null then -100 else list end  desc ) mdn_irv_rk_05 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ir00, ir01, ir02, ir03, ir04)) as list from (
+select code, date_index, increase_ratio as ir00
+, lag(increase_ratio, 01) over (partition by code order by date_index) as ir01
+, lag(increase_ratio, 02) over (partition by code order by date_index) as ir02
+, lag(increase_ratio, 03) over (partition by code order by date_index) as ir03
+, lag(increase_ratio, 04) over (partition by code order by date_index) as ir04
+from daily_increase_ratio ) t )t ) t where row_number = 3 ;
+
+drop table if exists irr_median05;
+create temp table irr_median05 as
+select code, date_index, cast(list as decimal(7,4)) as mdn_irr_vl_05
+,   row_number() over (partition by date_index order by
+        case when list is null then -100 else list end ) mdn_irr_rk_05 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ir00, ir01, ir02, ir03, ir04)) as list from (
+select code, date_index, rank as ir00
+, lag(rank, 01) over (partition by code order by date_index) as ir01
+, lag(rank, 02) over (partition by code order by date_index) as ir02
+, lag(rank, 03) over (partition by code order by date_index) as ir03
+, lag(rank, 04) over (partition by code order by date_index) as ir04
+from daily_increase_ratio ) t )t ) t where row_number = 3 ;
+
+drop table if exists irv_median10;
+create temp table irv_median10 as
+select code, date_index, cast(list as decimal(7,4)) as mdn_irv_vl_10
+,   row_number() over (partition by date_index order by
+        case when list is null then -100 else list end  desc ) mdn_irv_rk_10 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ir00, ir01, ir02, ir03, ir04, ir05, ir06, ir07, ir08, ir09)) as list from (
+select code, date_index, increase_ratio as ir00
+, lag(increase_ratio, 01) over (partition by code order by date_index) as ir01
+, lag(increase_ratio, 02) over (partition by code order by date_index) as ir02
+, lag(increase_ratio, 03) over (partition by code order by date_index) as ir03
+, lag(increase_ratio, 04) over (partition by code order by date_index) as ir04
+, lag(increase_ratio, 05) over (partition by code order by date_index) as ir05
+, lag(increase_ratio, 06) over (partition by code order by date_index) as ir06
+, lag(increase_ratio, 07) over (partition by code order by date_index) as ir07
+, lag(increase_ratio, 08) over (partition by code order by date_index) as ir08
+, lag(increase_ratio, 09) over (partition by code order by date_index) as ir09
+from daily_increase_ratio ) t )t ) t where row_number = 5 ;
+
+drop table if exists irr_median10;
+create temp table irr_median10 as
+select code, date_index, cast(list as decimal(7,4)) as mdn_irr_vl_10
+,   row_number() over (partition by date_index order by
+        case when list is null then -100 else list end ) mdn_irr_rk_10 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ir00, ir01, ir02, ir03, ir04, ir05, ir06, ir07, ir08, ir09)) as list from (
+select code, date_index, rank as ir00
+, lag(rank, 01) over (partition by code order by date_index) as ir01
+, lag(rank, 02) over (partition by code order by date_index) as ir02
+, lag(rank, 03) over (partition by code order by date_index) as ir03
+, lag(rank, 04) over (partition by code order by date_index) as ir04
+, lag(rank, 05) over (partition by code order by date_index) as ir05
+, lag(rank, 06) over (partition by code order by date_index) as ir06
+, lag(rank, 07) over (partition by code order by date_index) as ir07
+, lag(rank, 08) over (partition by code order by date_index) as ir08
+, lag(rank, 09) over (partition by code order by date_index) as ir09
+from daily_increase_ratio ) t )t ) t where row_number = 5 ;
+
+drop table if exists irv_median20;
+create temp table irv_median20 as
+select code, date_index, cast(list as decimal(7,4)) as mdn_irv_vl_20
+,   row_number() over (partition by date_index order by
+        case when list is null then -100 else list end  desc ) mdn_irv_rk_20 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+    ir00, ir01, ir02, ir03, ir04, ir05, ir06, ir07, ir08, ir09, ir10, ir11, ir12, ir13, ir14, ir15, ir16, ir17, ir18, ir19)) as list from (
+select code, date_index, increase_ratio as ir00
+, lag(increase_ratio, 01) over (partition by code order by date_index) as ir01
+, lag(increase_ratio, 02) over (partition by code order by date_index) as ir02
+, lag(increase_ratio, 03) over (partition by code order by date_index) as ir03
+, lag(increase_ratio, 04) over (partition by code order by date_index) as ir04
+, lag(increase_ratio, 05) over (partition by code order by date_index) as ir05
+, lag(increase_ratio, 06) over (partition by code order by date_index) as ir06
+, lag(increase_ratio, 07) over (partition by code order by date_index) as ir07
+, lag(increase_ratio, 08) over (partition by code order by date_index) as ir08
+, lag(increase_ratio, 09) over (partition by code order by date_index) as ir09
+, lag(increase_ratio, 10) over (partition by code order by date_index) as ir10
+, lag(increase_ratio, 11) over (partition by code order by date_index) as ir11
+, lag(increase_ratio, 22) over (partition by code order by date_index) as ir12
+, lag(increase_ratio, 33) over (partition by code order by date_index) as ir13
+, lag(increase_ratio, 14) over (partition by code order by date_index) as ir14
+, lag(increase_ratio, 15) over (partition by code order by date_index) as ir15
+, lag(increase_ratio, 16) over (partition by code order by date_index) as ir16
+, lag(increase_ratio, 17) over (partition by code order by date_index) as ir17
+, lag(increase_ratio, 18) over (partition by code order by date_index) as ir18
+, lag(increase_ratio, 19) over (partition by code order by date_index) as ir19
+from daily_increase_ratio ) t )t ) t where row_number = 10;
+
+drop table if exists irr_median20;
+create temp table irr_median20 as
+select code, date_index, cast(list as decimal(7,4)) as mdn_irr_vl_20
+,   row_number() over (partition by date_index order by
+        case when list is null then -100 else list end ) mdn_irr_rk_20 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+    ir00, ir01, ir02, ir03, ir04, ir05, ir06, ir07, ir08, ir09, ir10, ir11, ir12, ir13, ir14, ir15, ir16, ir17, ir18, ir19)) as list from (
+select code, date_index, rank as ir00
+, lag(rank, 01) over (partition by code order by date_index) as ir01
+, lag(rank, 02) over (partition by code order by date_index) as ir02
+, lag(rank, 03) over (partition by code order by date_index) as ir03
+, lag(rank, 04) over (partition by code order by date_index) as ir04
+, lag(rank, 01) over (partition by code order by date_index) as ir05
+, lag(rank, 02) over (partition by code order by date_index) as ir06
+, lag(rank, 03) over (partition by code order by date_index) as ir07
+, lag(rank, 04) over (partition by code order by date_index) as ir08
+, lag(rank, 04) over (partition by code order by date_index) as ir09
+, lag(rank, 04) over (partition by code order by date_index) as ir10
+, lag(rank, 01) over (partition by code order by date_index) as ir11
+, lag(rank, 02) over (partition by code order by date_index) as ir12
+, lag(rank, 03) over (partition by code order by date_index) as ir13
+, lag(rank, 04) over (partition by code order by date_index) as ir14
+, lag(rank, 01) over (partition by code order by date_index) as ir15
+, lag(rank, 02) over (partition by code order by date_index) as ir16
+, lag(rank, 03) over (partition by code order by date_index) as ir17
+, lag(rank, 04) over (partition by code order by date_index) as ir18
+, lag(rank, 04) over (partition by code order by date_index) as ir19
+from daily_increase_ratio ) t )t ) t where row_number = 10;
+
+drop table if exists temp_avg_ir_cal;
+create temporary table temp_avg_ir_cal as
+select  code, date_index, iratio00 as ratio_cur, rank00 as rank00,
+(iratio00 + iratio01 + iratio02)/3 as avg_irv_vl_03,
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04)/5 as avg_irv_vl_05,
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04 +
+iratio05 + iratio06 + iratio07 + iratio08 + iratio09)/10 as avg_irv_vl_10,
+(iratio00 + iratio01 + iratio02 + iratio03 + iratio04 +
+iratio05 + iratio06 + iratio07 + iratio08 + iratio09 +
+iratio10 + iratio11 + iratio12 + iratio13 + iratio14 +
+iratio15 + iratio16 + iratio17 + iratio18 + iratio19)/20 as avg_irv_vl_20,
+(rank00 + rank01 + rank02)/3.0 as avg_irr_vl_03,
+(rank00 + rank01 + rank02 + rank03 + rank04)/5.0 as avg_irr_vl_05,
+(rank00 + rank01 + rank02 + rank03 + rank04 +
+rank05 + rank06 + rank07 + rank08 + rank09)/10.0 as avg_irr_vl_10,
+(rank00 + rank01 + rank02 + rank03 + rank04 +
+rank05 + rank06 + rank07 + rank08 + rank09 +
+rank10 + rank11 + rank12 + rank13 + rank14 +
+rank15 + rank16 + rank17 + rank18 + rank19)/20.0 as avg_irr_vl_20
+from ( select code, date_index, increase_ratio as iratio00, rank as rank00
+, lag(increase_ratio, 01) over(partition by code order by date_index ) iratio01
+, lag(increase_ratio, 02) over(partition by code order by date_index ) iratio02
+, lag(increase_ratio, 03) over(partition by code order by date_index ) iratio03
+, lag(increase_ratio, 04) over(partition by code order by date_index ) iratio04
+, lag(increase_ratio, 05) over(partition by code order by date_index ) iratio05
+, lag(increase_ratio, 06) over(partition by code order by date_index ) iratio06
+, lag(increase_ratio, 07) over(partition by code order by date_index ) iratio07
+, lag(increase_ratio, 08) over(partition by code order by date_index ) iratio08
+, lag(increase_ratio, 09) over(partition by code order by date_index ) iratio09
+, lag(increase_ratio, 10) over(partition by code order by date_index ) iratio10
+, lag(increase_ratio, 11) over(partition by code order by date_index ) iratio11
+, lag(increase_ratio, 12) over(partition by code order by date_index ) iratio12
+, lag(increase_ratio, 13) over(partition by code order by date_index ) iratio13
+, lag(increase_ratio, 14) over(partition by code order by date_index ) iratio14
+, lag(increase_ratio, 15) over(partition by code order by date_index ) iratio15
+, lag(increase_ratio, 16) over(partition by code order by date_index ) iratio16
+, lag(increase_ratio, 17) over(partition by code order by date_index ) iratio17
+, lag(increase_ratio, 18) over(partition by code order by date_index ) iratio18
+, lag(increase_ratio, 19) over(partition by code order by date_index ) iratio19
+, lag(rank, 01) over(partition by code order by date_index ) rank01
+, lag(rank, 02) over(partition by code order by date_index ) rank02
+, lag(rank, 03) over(partition by code order by date_index ) rank03
+, lag(rank, 04) over(partition by code order by date_index ) rank04
+, lag(rank, 05) over(partition by code order by date_index ) rank05
+, lag(rank, 06) over(partition by code order by date_index ) rank06
+, lag(rank, 07) over(partition by code order by date_index ) rank07
+, lag(rank, 08) over(partition by code order by date_index ) rank08
+, lag(rank, 09) over(partition by code order by date_index ) rank09
+, lag(rank, 10) over(partition by code order by date_index ) rank10
+, lag(rank, 11) over(partition by code order by date_index ) rank11
+, lag(rank, 12) over(partition by code order by date_index ) rank12
+, lag(rank, 13) over(partition by code order by date_index ) rank13
+, lag(rank, 14) over(partition by code order by date_index ) rank14
+, lag(rank, 15) over(partition by code order by date_index ) rank15
+, lag(rank, 16) over(partition by code order by date_index ) rank16
+, lag(rank, 17) over(partition by code order by date_index ) rank17
+, lag(rank, 18) over(partition by code order by date_index ) rank18
+, lag(rank, 19) over(partition by code order by date_index ) rank19
+from daily_increase_ratio  ) t;
+
+drop table if exists ira_avg;
+create temp table ira_avg as  select code, date_index
+,   cast(avg_irv_vl_03 as decimal(7,4)) as avg_irv_vl_03
+,   cast(avg_irv_vl_05 as decimal(7,4)) as avg_irv_vl_05
+,   cast(avg_irv_vl_10 as decimal(7,4)) as avg_irv_vl_10
+,   cast(avg_irv_vl_20 as decimal(7,4)) as avg_irv_vl_20
+,   row_number() over (partition by date_index order by avg_irv_vl_03 desc) as avg_irv_rk_03
+,   row_number() over (partition by date_index order by avg_irv_vl_05 desc) as avg_irv_rk_05
+,   row_number() over (partition by date_index order by avg_irv_vl_10 desc) as avg_irv_rk_10
+,   row_number() over (partition by date_index order by avg_irv_vl_20 desc) as avg_irv_rk_20
+,   cast(avg_irr_vl_03 as decimal(7,4)) as avg_irr_vl_03
+,   cast(avg_irr_vl_05 as decimal(7,4)) as avg_irr_vl_05
+,   cast(avg_irr_vl_10 as decimal(7,4)) as avg_irr_vl_10
+,   cast(avg_irr_vl_20 as decimal(7,4)) as avg_irr_vl_20
+,   row_number() over (partition by date_index order by avg_irr_vl_03 ) as avg_irr_rk_03
+,   row_number() over (partition by date_index order by avg_irr_vl_05 ) as avg_irr_rk_05
+,   row_number() over (partition by date_index order by avg_irr_vl_10 ) as avg_irr_rk_10
+,   row_number() over (partition by date_index order by avg_irr_vl_20 ) as avg_irr_rk_20
+from temp_avg_ir_cal;
+
+drop table if exists feature_ir;
+create temp table feature_ir as
+select t.code, t.record_date, t.date_index
+, avg_irv_vl_03, avg_irv_vl_05, avg_irv_vl_10, avg_irv_vl_20
+, avg_irv_rk_03, avg_irv_rk_05, avg_irv_rk_10, avg_irv_rk_20
+, avg_irr_vl_03, avg_irr_vl_05, avg_irr_vl_10, avg_irr_vl_20
+, avg_irr_rk_03, avg_irr_rk_05, avg_irr_rk_10, avg_irr_rk_20
+, mdn_irv_vl_03, mdn_irv_vl_05, mdn_irv_vl_10, mdn_irv_vl_20
+, mdn_irv_rk_03, mdn_irv_rk_05, mdn_irv_rk_10, mdn_irv_rk_20
+, mdn_irr_vl_03, mdn_irr_vl_05, mdn_irr_vl_10, mdn_irr_vl_20
+, mdn_irr_rk_03, mdn_irr_rk_05, mdn_irr_rk_10, mdn_irr_rk_20
+from full_transactions t
+left join ira_avg  aa
+on t.code = aa.code and t.date_index = aa.date_index
+left join irv_median03
+on t.code = irv_median03.code and t.date_index = irv_median03.date_index
+left join irr_median03
+on t.code = irr_median03.code and t.date_index = irr_median03.date_index
+left join irv_median05
+on t.code = irv_median05.code and t.date_index = irv_median05.date_index
+left join irr_median05
+on t.code = irr_median05.code and t.date_index = irr_median05.date_index
+left join irv_median10
+on t.code = irv_median10.code and t.date_index = irv_median10.date_index
+left join irr_median10
+on t.code = irr_median10.code and t.date_index = irr_median10.date_index
+left join irv_median20
+on t.code = irv_median20.code and t.date_index = irv_median20.date_index
+left join irr_median20
+on t.code = irr_median20.code and t.date_index = irr_median20.date_index
+;
+
+END
+
+$$;
+
+alter function feature_ir() owner to postgres;
