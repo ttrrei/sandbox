@@ -1,0 +1,60 @@
+create function general() returns void
+    language plpgsql
+as
+$$
+BEGIN
+
+drop table if exists hist_temp;
+create temp table hist_temp as
+select concat(code, '.AX') as code
+, to_date(date, 'MM/DD/YY') as record_date
+, cast(cast(open as numeric) as decimal(7,3)) as open
+, cast(cast(high as numeric) as decimal(7,3)) as high
+, cast(cast(low as numeric) as decimal(7,3)) as low
+, cast(cast(close as numeric) as decimal(7,3)) as close
+, trunc(cast(volume as numeric)) as volume
+from hist_171101;
+
+drop table if exists transactions;
+create temp table transactions as  select  e.code
+,   coalesce ( h.open, e.market_open) as market_open
+,   coalesce ( h.close, e.market_price) as market_price
+,   coalesce ( h.high, e.market_day_high ) as market_day_high
+,   coalesce ( h.low, e.market_day_low ) as market_day_low
+,   coalesce ( h.volume, e.market_volume) as market_volume
+,   e.target_low_price,   e.target_high_price,   e.target_median_price,   e.target_mean_price
+,   e.recommendation_mean,   e.number_of_analyst-- ,   e.tailing_pe
+,   e.forward_pe,   e.average_volume,   e.short_position,   e.total_in_issue
+,   cast(e.reported_position as decimal(5,3)) as reported_position,   e.record_date
+from export_full_171113_200207 e inner join hist_temp h
+    on e.code = h.code and e.record_date = h.record_date
+where e.code not in ('EHL.AX');
+
+drop table if exists org_consensus_index;
+create temp table org_consensus_index as select record_date , count(*)
+from transactions where recommendation_mean is not null
+group by 1 having count(*) > 125 order by 1;
+
+drop table if exists full_date_index;
+create temp table full_date_index as select record_date, count(*) as count,
+row_number() over (order by record_date) as date_index
+from transactions group by 1 order by 1;
+
+drop table if exists full_transactions;
+create temp table full_transactions as
+select e.*, fdi.date_index from transactions e
+inner join full_date_index fdi on e.record_date = fdi.record_date;
+
+drop table if exists performance;
+create temporary table performance as
+select s.code, s.date_index, s.market_price as start_price,
+e.market_price as end_price
+from full_transactions s inner join full_transactions e
+on s.code = e.code and s.date_index = e.date_index -25;
+
+END
+
+$$;
+
+alter function general() owner to postgres;
+
