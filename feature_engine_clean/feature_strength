@@ -1,0 +1,67 @@
+create function feature_strength() returns void
+    language plpgsql
+as
+$$
+BEGIN
+
+drop table if exists temp_sub;
+create temporary table temp_sub as
+select code, date_index, average_volume,
+market_volume * (market_price - market_open)/market_open as strength
+from full_transactions where market_open <> 0 and  market_open is not null;
+
+drop table if exists temp_strength;
+create temporary table temp_strength as
+select t00.code, t00.date_index , t00.strength/t00.average_volume as current_strength
+, (t00.strength*5 + t01.strength*4 + t02.strength*3 + t03.strength*2 + t04.strength*1)/15/t00.average_volume as back05
+, (t00.strength*10 + t01.strength*9 + t02.strength*8 + t03.strength*7 + t04.strength*6
++  t05.strength*5 + t06.strength*4 + t07.strength*3 + t08.strength*2 + t09.strength*1)/55/t00.average_volume as back10
+, (t00.strength*20 + t01.strength*19 + t02.strength*18 + t03.strength*17 + t04.strength*16
++  t05.strength*15 + t06.strength*14 + t07.strength*13 + t08.strength*12 + t09.strength*11
++  t10.strength*10 + t11.strength*9 + t12.strength*8 + t13.strength*7 + t14.strength*6
++  t15.strength*5 + t16.strength*4 + t17.strength*3 + t18.strength*2 + t19.strength*1)/210/t00.average_volume as back20
+from temp_sub t00
+inner join temp_sub t01 on t00.date_index = t01.date_index +01 and t00.code = t01.code
+inner join temp_sub t02 on t00.date_index = t02.date_index +02 and t00.code = t02.code
+inner join temp_sub t03 on t00.date_index = t03.date_index +03 and t00.code = t03.code
+inner join temp_sub t04 on t00.date_index = t04.date_index +04 and t00.code = t04.code
+inner join temp_sub t05 on t00.date_index = t05.date_index +05 and t00.code = t05.code
+inner join temp_sub t06 on t00.date_index = t06.date_index +06 and t00.code = t06.code
+inner join temp_sub t07 on t00.date_index = t07.date_index +07 and t00.code = t07.code
+inner join temp_sub t08 on t00.date_index = t08.date_index +08 and t00.code = t08.code
+inner join temp_sub t09 on t00.date_index = t09.date_index +09 and t00.code = t09.code
+inner join temp_sub t10 on t00.date_index = t10.date_index +10 and t00.code = t10.code
+inner join temp_sub t11 on t00.date_index = t11.date_index +11 and t00.code = t11.code
+inner join temp_sub t12 on t00.date_index = t12.date_index +12 and t00.code = t12.code
+inner join temp_sub t13 on t00.date_index = t13.date_index +13 and t00.code = t13.code
+inner join temp_sub t14 on t00.date_index = t14.date_index +14 and t00.code = t14.code
+inner join temp_sub t15 on t00.date_index = t15.date_index +15 and t00.code = t15.code
+inner join temp_sub t16 on t00.date_index = t16.date_index +16 and t00.code = t16.code
+inner join temp_sub t17 on t00.date_index = t17.date_index +17 and t00.code = t17.code
+inner join temp_sub t18 on t00.date_index = t18.date_index +18 and t00.code = t18.code
+inner join temp_sub t19 on t00.date_index = t19.date_index +19 and t00.code = t19.code;
+
+drop table if exists temp_rank;
+create temp table temp_rank as select code, date_index
+,cast(back05 as decimal(7,6)), cast(back10 as decimal(7,6)), cast(back20 as decimal(7,6))
+, row_number() over (partition by date_index order by back05 desc) as rank05
+, row_number() over (partition by date_index order by back10 desc) as rank10
+, row_number() over (partition by date_index order by back20 desc) as rank20
+from temp_strength;
+
+drop table if exists feature_strength;
+create temporary table feature_strength as
+select t.code, t.record_date, t.date_index
+, back05 as strength05, back10 as strength10, back20 as strength20
+, rank05, rank10, rank20
+from full_transactions t
+left join temp_rank s
+on t.code = s.code
+and t.date_index = s.date_index;
+
+END
+
+$$;
+
+alter function feature_strength() owner to postgres;
+
