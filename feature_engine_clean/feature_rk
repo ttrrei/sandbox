@@ -1,0 +1,161 @@
+create function feature_rk() returns void
+    language plpgsql
+as
+$$
+BEGIN
+
+drop table if exists temp_rsv;
+create temp table temp_rsv as
+select code, record_date, date_index, top, down, recent,
+case when top <= down then 0 else (recent - down)/(top - down) end as rsv from
+( select code, record_date, date_index,  market_price as recent,
+greatest(   market_day_high
+, lag(market_day_high, 1) over( partition by code order by record_date)
+, lag(market_day_high, 2) over( partition by code order by record_date)
+, lag(market_day_high, 3) over( partition by code order by record_date)
+, lag(market_day_high, 4) over( partition by code order by record_date)
+) as top, least( market_day_low
+, lag(market_day_low, 1) over( partition by code order by record_date)
+, lag(market_day_low, 2) over( partition by code order by record_date)
+, lag(market_day_low, 3) over( partition by code order by record_date)
+, lag(market_day_low, 4) over( partition by code order by record_date)
+) as down from full_transactions ) temp ;
+
+
+drop table if exists rsv_median10;
+create temp table rsv_median10 as
+select code, date_index, list as rsv_median10
+     , row_number() over (partition by date_index order by list) as rank_rsv_median10 from (
+select code, date_index, cast(list as decimal(10,4)) as list
+     , row_number() over (partition by code, date_index order by cast(list as decimal(10,4))) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	rsv00, rsv01, rsv02, rsv03, rsv04, rsv05, rsv06, rsv07, rsv08, rsv09)) as list from (
+select code, date_index, rsv as rsv00
+, lag(rsv, 01) over (partition by code order by date_index) as rsv01
+, lag(rsv, 02) over (partition by code order by date_index) as rsv02
+, lag(rsv, 03) over (partition by code order by date_index) as rsv03
+, lag(rsv, 04) over (partition by code order by date_index) as rsv04
+, lag(rsv, 05) over (partition by code order by date_index) as rsv05
+, lag(rsv, 06) over (partition by code order by date_index) as rsv06
+, lag(rsv, 07) over (partition by code order by date_index) as rsv07
+, lag(rsv, 08) over (partition by code order by date_index) as rsv08
+, lag(rsv, 09) over (partition by code order by date_index) as rsv09
+from temp_rsv ) t ) t ) t where row_number = 5;
+
+drop table if exists rsv_median05;
+create temp table rsv_median05 as
+select code, date_index, list as rsv_median05
+     , row_number() over (partition by date_index order by list) as rank_rsv_median05 from (
+select code, date_index, cast(list as decimal(10,4)) as list
+     , row_number() over (partition by code, date_index order by cast(list as decimal(10,4))) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	rsv00, rsv01, rsv02, rsv03, rsv04)) as list from (
+select code, date_index, rsv as rsv00
+, lag(rsv, 01) over (partition by code order by date_index) as rsv01
+, lag(rsv, 02) over (partition by code order by date_index) as rsv02
+, lag(rsv, 03) over (partition by code order by date_index) as rsv03
+, lag(rsv, 04) over (partition by code order by date_index) as rsv04
+from temp_rsv ) t ) t ) t where row_number = 3;
+
+drop table if exists rsv_median03;
+create temp table rsv_median03 as
+select code, date_index, list as rsv_median03
+     , row_number() over (partition by date_index order by list) as rank_rsv_median03 from (
+select code, date_index, cast(list as decimal(10,4)) as list
+     , row_number() over (partition by code, date_index order by cast(list as decimal(10,4))) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	rsv00, rsv01, rsv02)) as list from (
+select code, date_index, rsv as rsv00
+, lag(rsv, 01) over (partition by code order by date_index) as rsv01
+, lag(rsv, 02) over (partition by code order by date_index) as rsv02
+from temp_rsv ) t ) t ) t where row_number = 2;
+
+drop table if exists temp_kind;
+create temporary table temp_kind as
+select code, record_date, date_index,
+((2^5/3^6) + (2^4/3^5)*lag_4 + (2^3/3^4)*lag_3 + (2^2/3^3)*lag_2 + (2^1/3^2)*lag_1 + (2^0/3^1)*lag_0) * 1.09625
+    as kind from (
+select code, record_date, date_index, rsv as lag_0,
+lag(rsv, 1) over (partition by code order by record_date) as lag_1,
+lag(rsv, 2) over (partition by code order by record_date) as lag_2,
+lag(rsv, 3) over (partition by code order by record_date) as lag_3,
+lag(rsv, 4) over (partition by code order by record_date) as lag_4
+from temp_rsv) t;
+
+drop table if exists ki_median10;
+create temporary table ki_median10 as
+select code, date_index, case when cast(list as decimal(10,4)) >= 1.0 then 0.999 else cast(list as decimal(5,3)) end as ki_median10
+     , row_number() over (partition by date_index order by list) as rank_ki_median10 from (
+select code, date_index, cast(list as decimal(10,4)) as list
+     , row_number() over (partition by code, date_index order by cast(list as decimal(10,4))) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	ki00, ki01, ki02, ki03, ki04, ki05, ki06, ki07, ki08, ki09)) as list from (
+select code, date_index, kind as ki00
+, lag(kind, 01) over (partition by code order by date_index) as ki01
+, lag(kind, 02) over (partition by code order by date_index) as ki02
+, lag(kind, 03) over (partition by code order by date_index) as ki03
+, lag(kind, 04) over (partition by code order by date_index) as ki04
+, lag(kind, 05) over (partition by code order by date_index) as ki05
+, lag(kind, 06) over (partition by code order by date_index) as ki06
+, lag(kind, 07) over (partition by code order by date_index) as ki07
+, lag(kind, 08) over (partition by code order by date_index) as ki08
+, lag(kind, 09) over (partition by code order by date_index) as ki09
+from temp_kind ) t) t ) t where row_number = 5;
+
+drop table if exists ki_median05;
+create temporary table ki_median05 as
+select code, date_index, case when cast(list as decimal(10,4)) >= 1.0 then 0.999 else cast(list as decimal(5,3)) end as ki_median05
+     , row_number() over (partition by date_index order by list) as rank_ki_median05 from (
+select code, date_index, cast(list as decimal(10,4)) as list
+     , row_number() over (partition by code, date_index order by cast(list as decimal(10,4))) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	ki00, ki01, ki02, ki03, ki04)) as list from (
+select code, date_index, kind as ki00
+, lag(kind, 01) over (partition by code order by date_index) as ki01
+, lag(kind, 02) over (partition by code order by date_index) as ki02
+, lag(kind, 03) over (partition by code order by date_index) as ki03
+, lag(kind, 04) over (partition by code order by date_index) as ki04
+from temp_kind ) t) t ) t where row_number = 3;
+
+drop table if exists ki_median03;
+create temporary table ki_median03 as
+select code, date_index, case when cast(list as decimal(10,4)) >= 1.0 then 0.999 else cast(list as decimal(5,3)) end as ki_median03
+     , row_number() over (partition by date_index order by list) as rank_ki_median03 from (
+select code, date_index, cast(list as decimal(10,4)) as list
+     , row_number() over (partition by code, date_index order by cast(list as decimal(10,4))) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array(
+	ki00, ki01, ki02)) as list from (
+select code, date_index, kind as ki00
+, lag(kind, 01) over (partition by code order by date_index) as ki01
+, lag(kind, 02) over (partition by code order by date_index) as ki02
+from temp_kind ) t ) t ) t where row_number = 2;
+
+drop table if exists feature_rk;
+create temp table feature_rk as
+select t.code, t.date_index, t.record_date
+,  r10.rank_rsv_median10  as rsv_rk_mdn10, r10.rsv_median10 as rsv_vl_mdn10
+,  r05.rank_rsv_median05  as rsv_rk_mdn05, r05.rsv_median05 as rsv_vl_mdn05
+,  r03.rank_rsv_median03  as rsv_rk_mdn03, r03.rsv_median03 as rsv_vl_mdn03
+,  k10.rank_ki_median10  as ki_rk_mdn10, k10.ki_median10 as ki_vl_mdn10
+,  k05.rank_ki_median05  as ki_rk_mdn05, k05.ki_median05 as ki_vl_mdn05
+,  k03.rank_ki_median03  as ki_rk_mdn03, k03.ki_median03 as ki_vl_mdn03
+from full_transactions t
+left join rsv_median10 r10
+on t.code = r10.code and t.date_index = r10.date_index
+left join rsv_median05 r05
+on t.code = r05.code and t.date_index = r05.date_index
+left join rsv_median03 r03
+on t.code = r03.code and t.date_index = r03.date_index
+left join ki_median10 k10
+on t.code = k10.code and t.date_index = k10.date_index
+left join ki_median05 k05
+on t.code = k05.code and t.date_index = k05.date_index
+left join ki_median03 k03
+on t.code = k03.code and t.date_index = k03.date_index ;
+
+END
+
+$$;
+
+alter function feature_rk() owner to postgres;
+
