@@ -1,0 +1,115 @@
+create function feature_st() returns void
+    language plpgsql
+as
+$$
+BEGIN
+drop table if exists short_strength;
+create temporary table short_strength as
+select *, row_number() over ( partition by date_index order by reported_position) as reported_position_rank
+     , row_number() over (partition by date_index order by short_strength) as short_strength_rank from (
+select code, date_index, short_position, average_volume, reported_position,
+       cast(short_position*1.000/average_volume as decimal(6,3)) as short_strength
+  from full_transactions ) t ;
+
+drop table if exists ss_median03;
+create temporary table ss_median03 as
+select code, date_index, list as mdn_ss_vl_03, row_number() over (partition by date_index order by list) as mdn_ss_rk_03 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ss00, ss01, ss02)) as list from (
+select code, date_index, short_strength as ss00
+, lag(short_strength, 01) over (partition by code order by date_index) as ss01
+, lag(short_strength, 02) over (partition by code order by date_index) as ss02
+from short_strength ) t ) t ) t where row_number = 2;
+
+drop table if exists rp_median03;
+create temporary table rp_median03 as
+select code, date_index, list as mdn_rp_vl_03, row_number() over (partition by date_index order by list) as mdn_rp_rk_03 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( rp00, rp01, rp02)) as list from (
+select code, date_index, reported_position as rp00
+, lag(reported_position, 01) over (partition by code order by date_index) as rp01
+, lag(reported_position, 02) over (partition by code order by date_index) as rp02
+from short_strength ) t ) t ) t where row_number = 2;
+
+drop table if exists ss_median05;
+create temporary table ss_median05 as
+select code, date_index, list as mdn_ss_vl_05, row_number() over (partition by date_index order by list) as mdn_ss_rk_05 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ss00, ss01, ss02, ss03, ss04)) as list from (
+select code, date_index, short_strength as ss00
+, lag(short_strength, 01) over (partition by code order by date_index) as ss01
+, lag(short_strength, 02) over (partition by code order by date_index) as ss02
+, lag(short_strength, 03) over (partition by code order by date_index) as ss03
+, lag(short_strength, 04) over (partition by code order by date_index) as ss04
+from short_strength ) t ) t ) t where row_number = 3;
+
+drop table if exists rp_median05;
+create temporary table rp_median05 as
+select code, date_index, list as mdn_rp_vl_05, row_number() over (partition by date_index order by list) as mdn_rp_rk_05 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( rp00, rp01, rp02, rp03, rp04)) as list from (
+select code, date_index, reported_position as rp00
+, lag(reported_position, 01) over (partition by code order by date_index) as rp01
+, lag(reported_position, 02) over (partition by code order by date_index) as rp02
+, lag(reported_position, 03) over (partition by code order by date_index) as rp03
+, lag(reported_position, 04) over (partition by code order by date_index) as rp04
+from short_strength ) t ) t ) t where row_number = 3;
+
+drop table if exists ss_median10;
+create temporary table ss_median10 as
+select code, date_index, list as mdn_ss_vl_10, row_number() over (partition by date_index order by list) as mdn_ss_rk_10 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( ss00, ss01, ss02, ss03, ss04, ss05, ss06, ss07, ss08, ss09)) as list from (
+select code, date_index, short_strength as ss00
+, lag(short_strength, 01) over (partition by code order by date_index) as ss01
+, lag(short_strength, 02) over (partition by code order by date_index) as ss02
+, lag(short_strength, 03) over (partition by code order by date_index) as ss03
+, lag(short_strength, 04) over (partition by code order by date_index) as ss04
+, lag(short_strength, 05) over (partition by code order by date_index) as ss05
+, lag(short_strength, 06) over (partition by code order by date_index) as ss06
+, lag(short_strength, 07) over (partition by code order by date_index) as ss07
+, lag(short_strength, 08) over (partition by code order by date_index) as ss08
+, lag(short_strength, 09) over (partition by code order by date_index) as ss09
+from short_strength ) t ) t ) t where row_number = 5;
+
+drop table if exists rp_median10;
+create temporary table rp_median10 as
+select code, date_index, list as mdn_rp_vl_10, row_number() over (partition by date_index order by list) as mdn_rp_rk_10 from (
+select code, date_index, list::numeric, row_number() over (partition by code, date_index order by list::numeric) as row_number from (
+select code, date_index, json_array_elements_text(json_build_array( rp00, rp01, rp02, rp03, rp04, rp05, rp06, rp07, rp08, rp09)) as list from (
+select code, date_index, reported_position as rp00
+, lag(reported_position, 01) over (partition by code order by date_index) as rp01
+, lag(reported_position, 02) over (partition by code order by date_index) as rp02
+, lag(reported_position, 03) over (partition by code order by date_index) as rp03
+, lag(reported_position, 04) over (partition by code order by date_index) as rp04
+, lag(reported_position, 05) over (partition by code order by date_index) as rp05
+, lag(reported_position, 06) over (partition by code order by date_index) as rp06
+, lag(reported_position, 07) over (partition by code order by date_index) as rp07
+, lag(reported_position, 08) over (partition by code order by date_index) as rp08
+, lag(reported_position, 09) over (partition by code order by date_index) as rp09
+from short_strength ) t ) t ) t where row_number = 5;
+
+drop table if exists feature_st;
+create temporary table feature_st as 
+select t.code, t.date_index, t.record_date
+from full_transactions t
+left join ss_median03 s03
+    on t.code = s03.code and t.date_index = s03.date_index
+left join rp_median03 r03
+    on t.code = r03.code and t.date_index = r03.date_index
+left join ss_median05 s05
+    on t.code = s05.code and t.date_index = s05.date_index
+left join rp_median05 r05
+    on t.code = r05.code and t.date_index = r05.date_index
+left join ss_median10 s10
+    on t.code = s10.code and t.date_index = s10.date_index
+left join rp_median10 r10
+    on t.code = r10.code and t.date_index = r10.date_index
+;
+
+END
+
+$$;
+
+alter function feature_st() owner to postgres;
+
