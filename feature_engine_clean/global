@@ -1,0 +1,96 @@
+create function global() returns void
+    language plpgsql
+as
+$$
+BEGIN
+
+drop table if exists temp_global_indicator_raw;
+create temporary table temp_global_indicator_raw as
+select date_index, record_date, count(*) as record_number
+, cast(sum((market_price - market_open) * market_volume) as decimal(16,2)) as full_trading_strength
+, cast(sum(market_price * short_position)as decimal(16,2)) as full_short_size
+, cast(sum(market_price * market_volume)as decimal(16,2)) / cast(sum(market_price * short_position)as decimal(16,2))  as full_active_ts
+, cast(sum(forward_pe * market_volume) as decimal(16,2)) as full_over_value
+
+, cast(sum(case when rank_pe > 50 then 0 else (market_price - market_open) * market_volume end ) as decimal(16,2)) as pe_trading_strength
+, cast(sum(case when rank_pe > 50 then 0 else (market_price * short_position) end ) as decimal(16,2)) as pe_short_size
+, cast(sum(case when rank_pe > 50 then 0 else (market_price * market_volume) end ) as decimal(16,2))
+/ cast(sum(case when rank_pe > 50 then 0 else (market_price * short_position) end ) as decimal(16,2)) as pe_active_ts
+, cast(sum(case when rank_pe > 50 then 0 else (forward_pe * market_volume) end) as decimal(16,2)) as pe_over_value
+
+, cast(sum(case when rank_volume > 50 then 0 else (market_price - market_open) * market_volume end ) as decimal(16,2)) as volume_trading_strength
+, cast(sum(case when rank_volume > 50 then 0 else (market_price * short_position) end ) as decimal(16,2)) as volume_short_size
+, cast(sum(case when rank_volume > 50 then 0 else (market_price * market_volume) end ) as decimal(16,2))
+/ cast(sum(case when rank_volume > 50 then 0 else (market_price * short_position) end ) as decimal(16,2)) as volume_active_ts
+, cast(sum(case when rank_volume > 50 then 0 else (forward_pe * market_volume) end) as decimal(16,2)) as volume_over_value
+
+from (select *
+, row_number() over (partition by  record_date order by case when forward_pe is null then 0 else forward_pe end  desc) as rank_pe
+, row_number() over (partition by  record_date order by case when market_price * market_volume is null then 0 else market_price * market_volume end  desc) as rank_volume
+from full_transactions) temp
+where market_price is not null and  market_open is not null and market_volume is not null and  short_position is not null
+group by date_index,record_date order by date_index, record_date;
+
+drop table if exists scale_idc;
+create temp table scale_idc as
+select 1 as idx
+, min(full_trading_strength) as min_full_trading_strength
+, avg(full_trading_strength) as avg_full_trading_strength
+
+, min(full_short_size) as min_full_short_size
+, avg(full_short_size) as avg_full_short_size
+
+, min(full_active_ts) as min_full_active_ts
+, avg(full_active_ts) as avg_full_active_ts
+
+, min(full_over_value) as min_full_over_value
+, avg(full_over_value) as avg_full_over_value
+
+, min(pe_trading_strength) as min_pe_trading_strength
+, avg(pe_trading_strength) as avg_pe_trading_strength
+
+, min(pe_short_size) as min_pe_short_size
+, avg(pe_short_size) as avg_pe_short_size
+
+, min(pe_active_ts) as min_pe_active_ts
+, avg(pe_active_ts) as avg_pe_active_ts
+
+, min(pe_over_value) as min_pe_over_value
+, avg(pe_over_value) as avg_pe_over_value
+
+, min(volume_trading_strength) as min_volume_trading_strength
+, avg(volume_trading_strength) as avg_volume_trading_strength
+
+, min(volume_short_size) as min_volume_short_size
+, avg(volume_short_size) as avg_volume_short_size
+
+, min(volume_active_ts) as min_volume_active_ts
+, avg(volume_active_ts) as avg_volume_active_ts
+
+, min(volume_over_value) as min_volume_over_value
+, avg(volume_over_value) as avg_volume_over_value
+
+from temp_global_indicator_raw;
+
+drop table if exists temp_global_indicator;
+create temp  table temp_global_indicator as select date_index, record_date
+,  ( full_trading_strength - min_full_trading_strength) / (avg_full_trading_strength - min_full_trading_strength) as full_trading_strength
+,  ( full_short_size - min_full_short_size) / (avg_full_short_size - min_full_short_size) as full_short_size
+,  ( full_active_ts - min_full_active_ts) / (avg_full_active_ts - min_full_active_ts) as full_active_ts
+,  ( full_over_value - min_full_over_value) / (avg_full_over_value - min_full_over_value) as full_over_value
+,  ( pe_trading_strength - min_pe_trading_strength) / (avg_pe_trading_strength - min_pe_trading_strength) as pe_trading_strength
+,  ( pe_short_size - min_pe_short_size) / (avg_pe_short_size - min_pe_short_size) as pe_short_size
+,  ( pe_active_ts - min_pe_active_ts) / (avg_pe_active_ts - min_pe_active_ts) as pe_active_ts
+,  ( pe_over_value - min_pe_over_value) / (avg_pe_over_value - min_pe_over_value) as pe_over_value
+,  ( volume_trading_strength - min_volume_trading_strength) / (avg_volume_trading_strength - min_volume_trading_strength) as volume_trading_strength
+,  ( volume_short_size - min_volume_short_size) / (avg_volume_short_size - min_volume_short_size) as volume_short_size
+,  ( volume_active_ts - min_volume_active_ts) / (avg_volume_active_ts - min_volume_active_ts) as volume_active_ts
+,  ( volume_over_value - min_volume_over_value) / (avg_volume_over_value - min_volume_over_value) as volume_over_value
+from temp_global_indicator_raw i cross join scale_idc s;
+
+END
+
+$$;
+
+alter function global() owner to postgres;
+
