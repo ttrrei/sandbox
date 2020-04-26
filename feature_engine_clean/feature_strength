@@ -59,6 +59,52 @@ left join temp_rank s
 on t.code = s.code
 and t.date_index = s.date_index;
 
+drop table if exists feature_strength_para;
+create temp table feature_strength_para as select 1
+, min(strength05) as min_strength05 , avg(strength05) as avg_strength05
+, min(strength10) as min_strength10 , avg(strength10) as avg_strength10
+, min(strength20) as min_strength20 , avg(strength20) as avg_strength20
+, min(rank20) as min_rank20, avg(rank20) as avg_rank20
+, min(rank10) as min_rank10, avg(rank10) as avg_rank10
+, min(rank05) as min_rank05, avg(rank05) as avg_rank05
+from feature_strength;
+
+drop table if exists feature_strength_rank_temp;
+create temp table feature_strength_rank_temp as select code, record_date, date_index
+, (strength05 - min_strength05) / (avg_strength05 - min_strength05) as strength05
+, (strength10 - min_strength10) / (avg_strength10 - min_strength10) as strength10
+, (strength20 - min_strength20) / (avg_strength20 - min_strength20) as strength20
+, (rank05 - min_rank05) / (avg_rank05 - min_rank05) as rank05
+, (rank10 - min_rank10) / (avg_rank10 - min_rank10) as rank10
+, (rank20 - min_rank20) / (avg_rank20 - min_rank20) as rank20
+, rank20 - rank10 as diff_rank20_10
+, rank20 - rank05 as diff_rank20_05
+, rank10 - rank05 as diff_rank10_05
+from feature_strength cross join feature_strength_para;
+
+drop table if exists feature_strength_rank_para;
+create temp table feature_strength_rank_para as select 1
+, min(diff_rank20_10) as min_diff_rank20_10 , avg(diff_rank20_10) as avg_diff_rank20_10
+, min(diff_rank20_05) as min_diff_rank20_05 , avg(diff_rank20_05) as avg_diff_rank20_05
+, min(diff_rank10_05) as min_diff_rank10_05 , avg(diff_rank10_05) as avg_diff_rank10_05
+from feature_strength_rank_temp;
+
+drop table if exists feature_strength_scale;
+create temp table feature_strength_scale as select code, record_date, date_index
+, cast((1/(1+EXP(0-(strength05))))*2-1 as decimal(5,3)) as strength05
+, cast((1/(1+EXP(0-(strength10))))*2-1 as decimal(5,3)) as strength10
+, cast((1/(1+EXP(0-(strength20))))*2-1 as decimal(5,3)) as strength20
+, cast((1/(1+EXP(0-(rank20))))*2-1 as decimal(5,3)) as rank20
+, cast((1/(1+EXP(0-(rank10))))*2-1 as decimal(5,3)) as rank10
+, cast((1/(1+EXP(0-(rank05))))*2-1 as decimal(5,3)) as rank05
+, case when strength10= 0 then 1 else cast((1/(1+EXP(0-strength20 / strength10)))*2-1 as decimal(5,3)) end as devided_strength20_10
+, case when strength05= 0 then 1 else cast((1/(1+EXP(0-strength20 / strength05)))*2-1 as decimal(5,3)) end as devided_strength20_05
+, case when strength05= 0 then 1 else cast((1/(1+EXP(0-strength10 / strength05)))*2-1 as decimal(5,3)) end as devided_strength10_05
+, case when avg_diff_rank20_10 = min_diff_rank20_10 then 1 else cast((1/(1+EXP(0-(diff_rank20_10 - min_diff_rank20_10) / (avg_diff_rank20_10 - min_diff_rank20_10))))*2-1 as decimal(5,3)) end as devided_rank20_10
+, case when avg_diff_rank20_05 = min_diff_rank20_05 then 1 else cast((1/(1+EXP(0-(diff_rank20_05 - min_diff_rank20_05) / (avg_diff_rank20_05 - min_diff_rank20_05))))*2-1 as decimal(5,3)) end as devided_rank20_05
+, case when avg_diff_rank10_05 = min_diff_rank10_05 then 1 else cast((1/(1+EXP(0-(diff_rank10_05 - min_diff_rank10_05) / (avg_diff_rank10_05 - min_diff_rank10_05))))*2-1 as decimal(5,3)) end as devided_rank10_05
+from feature_strength_rank_temp cross join feature_strength_rank_para;
+
 END
 
 $$;
