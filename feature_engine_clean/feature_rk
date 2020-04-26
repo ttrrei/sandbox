@@ -153,6 +153,84 @@ on t.code = k05.code and t.date_index = k05.date_index
 left join ki_median03 k03
 on t.code = k03.code and t.date_index = k03.date_index ;
 
+
+drop table if exists feature_rk_para;
+create temp table feature_rk_para as select 1
+,min(rsv_rk_mdn10) as min_rsv_rk_mdn10 , avg(rsv_rk_mdn10) as avg_rsv_rk_mdn10
+,min(rsv_rk_mdn05) as min_rsv_rk_mdn05 , avg(rsv_rk_mdn05) as avg_rsv_rk_mdn05
+,min(rsv_rk_mdn03) as min_rsv_rk_mdn03 , avg(rsv_rk_mdn03) as avg_rsv_rk_mdn03
+,min(rsv_vl_mdn10) as min_rsv_vl_mdn10 , avg(rsv_vl_mdn10) as avg_rsv_vl_mdn10
+,min(rsv_vl_mdn05) as min_rsv_vl_mdn05 , avg(rsv_vl_mdn05) as avg_rsv_vl_mdn05
+,min(rsv_vl_mdn03) as min_rsv_vl_mdn03 , avg(rsv_vl_mdn03) as avg_rsv_vl_mdn03
+,min(ki_rk_mdn10 ) as min_ki_rk_mdn10  , avg(ki_rk_mdn10 ) as avg_ki_rk_mdn10
+,min(ki_rk_mdn05 ) as min_ki_rk_mdn05  , avg(ki_rk_mdn05 ) as avg_ki_rk_mdn05
+,min(ki_rk_mdn03 ) as min_ki_rk_mdn03  , avg(ki_rk_mdn03 ) as avg_ki_rk_mdn03
+,min(ki_vl_mdn10 ) as min_ki_vl_mdn10  , avg(ki_vl_mdn10 ) as avg_ki_vl_mdn10
+,min(ki_vl_mdn05 ) as min_ki_vl_mdn05  , avg(ki_vl_mdn05 ) as avg_ki_vl_mdn05
+,min(ki_vl_mdn03 ) as min_ki_vl_mdn03  , avg(ki_vl_mdn03 ) as avg_ki_vl_mdn03
+from feature_rk;
+
+
+drop table if exists feature_rk_temp;
+create temp table feature_rk_temp as select code, date_index, record_date
+, (rsv_rk_mdn10 - min_rsv_rk_mdn10) / (avg_rsv_rk_mdn10 - min_rsv_rk_mdn10) as rsv_rk_mdn10
+, (rsv_rk_mdn05 - min_rsv_rk_mdn05) / (avg_rsv_rk_mdn05 - min_rsv_rk_mdn05) as rsv_rk_mdn05
+, (rsv_rk_mdn03 - min_rsv_rk_mdn03) / (avg_rsv_rk_mdn03 - min_rsv_rk_mdn03) as rsv_rk_mdn03
+, (rsv_vl_mdn10 - min_rsv_vl_mdn10) / (avg_rsv_vl_mdn10 - min_rsv_vl_mdn10) as rsv_vl_mdn10
+, (rsv_vl_mdn05 - min_rsv_vl_mdn05) / (avg_rsv_vl_mdn05 - min_rsv_vl_mdn05) as rsv_vl_mdn05
+, (rsv_vl_mdn03 - min_rsv_vl_mdn03) / (avg_rsv_vl_mdn03 - min_rsv_vl_mdn03) as rsv_vl_mdn03
+, (ki_rk_mdn10  - min_ki_rk_mdn10 ) / (avg_ki_rk_mdn10  - min_ki_rk_mdn10 ) as ki_rk_mdn10
+, (ki_rk_mdn05  - min_ki_rk_mdn05 ) / (avg_ki_rk_mdn05  - min_ki_rk_mdn05 ) as ki_rk_mdn05
+, (ki_rk_mdn03  - min_ki_rk_mdn03 ) / (avg_ki_rk_mdn03  - min_ki_rk_mdn03 ) as ki_rk_mdn03
+, (ki_vl_mdn10  - min_ki_vl_mdn10 ) / (avg_ki_vl_mdn10  - min_ki_vl_mdn10 ) as ki_vl_mdn10
+, (ki_vl_mdn05  - min_ki_vl_mdn05 ) / (avg_ki_vl_mdn05  - min_ki_vl_mdn05 ) as ki_vl_mdn05
+, (ki_vl_mdn03  - min_ki_vl_mdn03 ) / (avg_ki_vl_mdn03  - min_ki_vl_mdn03 ) as ki_vl_mdn03
+, rsv_rk_mdn10 - rsv_rk_mdn05 as diff_rsv_rk_mdn10_05
+, rsv_rk_mdn10 - rsv_rk_mdn03 as diff_rsv_rk_mdn10_03
+, rsv_rk_mdn05 - rsv_rk_mdn03 as diff_rsv_rk_mdn05_03
+, ki_rk_mdn10 - ki_rk_mdn05   as diff_ki_rk_mdn10_05
+, ki_rk_mdn10 - ki_rk_mdn03   as diff_ki_rk_mdn10_03
+, ki_rk_mdn05 - ki_rk_mdn03   as diff_ki_rk_mdn05_03
+from feature_rk cross join feature_rk_para;
+
+drop table if exists feature_rk_temp_para;
+create temp table feature_rk_temp_para as select 1
+, min(diff_rsv_rk_mdn10_05) as min_diff_rsv_rk_mdn10_05 , avg(diff_rsv_rk_mdn10_05) as avg_diff_rsv_rk_mdn10_05
+, min(diff_rsv_rk_mdn10_03) as min_diff_rsv_rk_mdn10_03 , avg(diff_rsv_rk_mdn10_03) as avg_diff_rsv_rk_mdn10_03
+, min(diff_rsv_rk_mdn05_03) as min_diff_rsv_rk_mdn05_03 , avg(diff_rsv_rk_mdn05_03) as avg_diff_rsv_rk_mdn05_03
+, min(diff_ki_rk_mdn10_05 ) as min_diff_ki_rk_mdn10_05  , avg(diff_ki_rk_mdn10_05 ) as avg_diff_ki_rk_mdn10_05
+, min(diff_ki_rk_mdn10_03 ) as min_diff_ki_rk_mdn10_03  , avg(diff_ki_rk_mdn10_03 ) as avg_diff_ki_rk_mdn10_03
+, min(diff_ki_rk_mdn05_03 ) as min_diff_ki_rk_mdn05_03  , avg(diff_ki_rk_mdn05_03 ) as avg_diff_ki_rk_mdn05_03
+from feature_rk_temp;
+
+drop table if exists feature_rk_scale;
+create temp table feature_rk_scale as select  code, date_index, record_date
+, cast((1/(1+EXP(0-(rsv_rk_mdn10))))*2-1 as decimal(5,3)) as rsv_rk_mdn10
+, cast((1/(1+EXP(0-(rsv_rk_mdn05))))*2-1 as decimal(5,3)) as rsv_rk_mdn05
+, cast((1/(1+EXP(0-(rsv_rk_mdn03))))*2-1 as decimal(5,3)) as rsv_rk_mdn03
+, cast((1/(1+EXP(0-(rsv_vl_mdn10))))*2-1 as decimal(5,3)) as rsv_vl_mdn10
+, cast((1/(1+EXP(0-(rsv_vl_mdn05))))*2-1 as decimal(5,3)) as rsv_vl_mdn05
+, cast((1/(1+EXP(0-(rsv_vl_mdn03))))*2-1 as decimal(5,3)) as rsv_vl_mdn03
+, cast((1/(1+EXP(0-(ki_rk_mdn10 ))))*2-1 as decimal(5,3)) as ki_rk_mdn10
+, cast((1/(1+EXP(0-(ki_rk_mdn05 ))))*2-1 as decimal(5,3)) as ki_rk_mdn05
+, cast((1/(1+EXP(0-(ki_rk_mdn03 ))))*2-1 as decimal(5,3)) as ki_rk_mdn03
+, cast((1/(1+EXP(0-(ki_vl_mdn10 ))))*2-1 as decimal(5,3)) as ki_vl_mdn10
+, cast((1/(1+EXP(0-(ki_vl_mdn05 ))))*2-1 as decimal(5,3)) as ki_vl_mdn05
+, cast((1/(1+EXP(0-(ki_vl_mdn03 ))))*2-1 as decimal(5,3)) as ki_vl_mdn03
+, case when rsv_vl_mdn05= 0 then 1 else cast((1/(1+EXP(0-rsv_vl_mdn10 / rsv_vl_mdn05)))*2-1 as decimal(5,3)) end as devided_rsv_vl_mdn10_05
+, case when rsv_vl_mdn03= 0 then 1 else cast((1/(1+EXP(0-rsv_vl_mdn10 / rsv_vl_mdn03)))*2-1 as decimal(5,3)) end as devided_rsv_vl_mdn10_03
+, case when rsv_vl_mdn03= 0 then 1 else cast((1/(1+EXP(0-rsv_vl_mdn05 / rsv_vl_mdn03)))*2-1 as decimal(5,3)) end as devided_rsv_vl_mdn05_03
+, case when ki_vl_mdn05= 0 then 1 else cast((1/(1+EXP(0-ki_vl_mdn10 / ki_vl_mdn05)))*2-1 as decimal(5,3)) end as devided_ki_vl_mdn10_05
+, case when ki_vl_mdn03= 0 then 1 else cast((1/(1+EXP(0-ki_vl_mdn10 / ki_vl_mdn03)))*2-1 as decimal(5,3)) end as devided_ki_vl_mdn10_03
+, case when ki_vl_mdn03= 0 then 1 else cast((1/(1+EXP(0-ki_vl_mdn05 / ki_vl_mdn03)))*2-1 as decimal(5,3)) end as devided_ki_vl_mdn05_03
+, case when avg_diff_rsv_rk_mdn10_05 = min_diff_rsv_rk_mdn10_05 then 1 else cast((1/(1+EXP(0-(diff_rsv_rk_mdn10_05 - min_diff_rsv_rk_mdn10_05) / (avg_diff_rsv_rk_mdn10_05 - min_diff_rsv_rk_mdn10_05))))*2-1 as decimal(5,3)) end as devided_rsv_rank10_05
+, case when avg_diff_rsv_rk_mdn10_03 = min_diff_rsv_rk_mdn10_03 then 1 else cast((1/(1+EXP(0-(diff_rsv_rk_mdn10_03 - min_diff_rsv_rk_mdn10_03) / (avg_diff_rsv_rk_mdn10_03 - min_diff_rsv_rk_mdn10_03))))*2-1 as decimal(5,3)) end as devided_rsv_rank10_03
+, case when avg_diff_rsv_rk_mdn05_03 = min_diff_rsv_rk_mdn05_03 then 1 else cast((1/(1+EXP(0-(diff_rsv_rk_mdn05_03 - min_diff_rsv_rk_mdn05_03) / (avg_diff_rsv_rk_mdn05_03 - min_diff_rsv_rk_mdn05_03))))*2-1 as decimal(5,3)) end as devided_rsv_rank05_03
+, case when avg_diff_ki_rk_mdn10_05 = min_diff_ki_rk_mdn10_05 then 1 else cast((1/(1+EXP(0-(diff_ki_rk_mdn10_05 - min_diff_ki_rk_mdn10_05) / (avg_diff_ki_rk_mdn10_05 - min_diff_ki_rk_mdn10_05))))*2-1 as decimal(5,3)) end as devided_ki_rank10_05
+, case when avg_diff_ki_rk_mdn10_03 = min_diff_ki_rk_mdn10_03 then 1 else cast((1/(1+EXP(0-(diff_ki_rk_mdn10_03 - min_diff_ki_rk_mdn10_03) / (avg_diff_ki_rk_mdn10_03 - min_diff_ki_rk_mdn10_03))))*2-1 as decimal(5,3)) end as devided_ki_rank10_03
+, case when avg_diff_ki_rk_mdn05_03 = min_diff_ki_rk_mdn05_03 then 1 else cast((1/(1+EXP(0-(diff_ki_rk_mdn05_03 - min_diff_ki_rk_mdn05_03) / (avg_diff_ki_rk_mdn05_03 - min_diff_ki_rk_mdn05_03))))*2-1 as decimal(5,3)) end as devided_ki_rank05_03
+from feature_rk_temp cross join feature_rk_temp_para;
+
 END
 
 $$;
