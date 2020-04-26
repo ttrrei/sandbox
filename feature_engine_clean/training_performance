@@ -1,0 +1,258 @@
+create function training_performance() returns void
+    language plpgsql
+as
+$$
+BEGIN
+
+drop table if exists org_consensus_index;
+create temp table org_consensus_index as select record_date , count(*)
+from public.export_full_171113_200207 where recommendation_mean is not null group by 1 having count(*) > 125 order by 1;
+drop table if exists mi_consensus_index;
+create temp table mi_consensus_index as select record_date, count(*),
+    row_number() over (order by record_date) as rank
+from  public.export_full_171113_200207 where mi_buy is not null group by 1 order by 1 ;
+
+drop table if exists full_date_index;
+create temp table full_date_index as select record_date, count(*) as count, row_number() over (order by record_date) as date_index
+from public.export_full_171113_200207 group by 1 order by 1;
+
+drop table if exists idx_export ;
+create temp table idx_export as select e.*, i.date_index ,
+        row_number() over (partition by e.record_date
+                order by case when e.forward_pe is null then 0 else e.forward_pe end desc) as pe_rank
+from public.export_full_171113_200207  e
+inner join full_date_index i on e.record_date = i.record_date;
+
+drop table if exists performance;
+create temp table performance as select s.code, s.record_date, s.date_index, s.market_open
+,cast(case when s.market_open is not null and s.market_open <> 0 then
+    (s.market_price - s.market_open ) / s.market_open else 0 end as decimal(5,3) )as ratio01
+-- ,cast(case when s.market_open is not null and s.market_open <> 0 then
+--     (e1.market_price - s.market_open ) / s.market_open else 0 end as decimal(5,3) )as ratio05
+-- ,cast(case when s.market_open is not null and s.market_open <> 0 then
+--     (e2.market_price - s.market_open ) / s.market_open else 0 end as decimal(5,3) )as ratio10
+,cast(case when s.market_open is not null and s.market_open <> 0 then
+    (e3.market_price - s.market_open ) / s.market_open else 0 end as decimal(5,3) )as ratio25
+from idx_export s
+-- inner join idx_export e1 on s.code = e1.code and s.date_index = e1.date_index - 4
+-- inner join idx_export e2 on s.code = e2.code and s.date_index = e2.date_index - 9
+inner join idx_export e3 on s.code = e3.code and s.date_index = e3.date_index - 24;
+
+drop table if exists temp_set;
+create temp table temp_set as
+select e.*, p.ratio01
+--        , p.ratio05, p.ratio10
+       , p.ratio25
+from idx_export e inner join performance p
+on e.code = p.code and e.record_date = p.record_date
+inner join org_consensus_index o on e.record_date = o.record_date
+where e.code not in ( 'EHL.AX', 'SEA.AX')
+  and average_volume > 70000
+and
+      case when (target_high_price <= target_low_price) then 0 else
+      (target_median_price - target_low_price) / (target_high_price - target_low_price) end > 0.4
+;
+
+
+drop table if exists temp_cal;
+create temp table temp_cal as
+select code, record_date, date_index, ratio25 as performance,
+--         case when pe_rank < 100 then (100 - pe_rank) / 100.0 else 0 end as pe,
+--         case when number_of_analyst < 4 or recommendation_mean is null then 0 else (5 -recommendation_mean::decimal(5,3))/20 end as rec,
+row_number() over( partition by record_date order by
+    case when pe_rank < 100 then (100 - pe_rank) / 100.0 else 0 end
+        +
+    case when number_of_analyst < 4 or recommendation_mean is null then 0 else (5 -recommendation_mean::decimal(5,3))/40 end
+    desc ) as rec_rank
+from temp_set ;
+
+drop table if exists calculation;
+create temp table calculation as 
+select * from temp_cal where rec_rank < 11;
+
+
+drop table if exists trainingset;
+create temp table trainingset as
+select c.code, c.record_date, c.date_index, c.performance
+, ir.avg_irv_vl_03 as ir_avg_irv_vl_03
+, ir.avg_irv_vl_05 as ir_avg_irv_vl_05
+, ir.avg_irv_vl_10 as ir_avg_irv_vl_10
+, ir.avg_irv_vl_20 as ir_avg_irv_vl_20
+, ir.avg_irv_rk_03 as ir_avg_irv_rk_03
+, ir.avg_irv_rk_05 as ir_avg_irv_rk_05
+, ir.avg_irv_rk_10 as ir_avg_irv_rk_10
+, ir.avg_irv_rk_20 as ir_avg_irv_rk_20
+, ir.avg_irr_vl_03 as ir_avg_irr_vl_03
+, ir.avg_irr_vl_05 as ir_avg_irr_vl_05
+, ir.avg_irr_vl_10 as ir_avg_irr_vl_10
+, ir.avg_irr_vl_20 as ir_avg_irr_vl_20
+, ir.avg_irr_rk_03 as ir_avg_irr_rk_03
+, ir.avg_irr_rk_05 as ir_avg_irr_rk_05
+, ir.avg_irr_rk_10 as ir_avg_irr_rk_10
+, ir.avg_irr_rk_20 as ir_avg_irr_rk_20
+, ir.mdn_irv_vl_03 as ir_mdn_irv_vl_03
+, ir.mdn_irv_vl_05 as ir_mdn_irv_vl_05
+, ir.mdn_irv_vl_10 as ir_mdn_irv_vl_10
+, ir.mdn_irv_vl_20 as ir_mdn_irv_vl_20
+, ir.mdn_irv_rk_03 as ir_mdn_irv_rk_03
+, ir.mdn_irv_rk_05 as ir_mdn_irv_rk_05
+, ir.mdn_irv_rk_10 as ir_mdn_irv_rk_10
+, ir.mdn_irv_rk_20 as ir_mdn_irv_rk_20
+, ir.mdn_irr_vl_03 as ir_mdn_irr_vl_03
+, ir.mdn_irr_vl_05 as ir_mdn_irr_vl_05
+, ir.mdn_irr_vl_10 as ir_mdn_irr_vl_10
+, ir.mdn_irr_vl_20 as ir_mdn_irr_vl_20
+, ir.mdn_irr_rk_03 as ir_mdn_irr_rk_03
+, ir.mdn_irr_rk_05 as ir_mdn_irr_rk_05
+, ir.mdn_irr_rk_10 as ir_mdn_irr_rk_10
+, ir.mdn_irr_rk_20 as ir_mdn_irr_rk_20
+, ir.diff_avg_irv_rk_20_10 as ir_diff_avg_irv_rk_20_10
+, ir.diff_avg_irv_rk_20_05 as ir_diff_avg_irv_rk_20_05
+, ir.diff_avg_irv_rk_20_03 as ir_diff_avg_irv_rk_20_03
+, ir.diff_avg_irv_rk_10_05 as ir_diff_avg_irv_rk_10_05
+, ir.diff_avg_irv_rk_10_03 as ir_diff_avg_irv_rk_10_03
+, ir.diff_avg_irv_rk_05_03 as ir_diff_avg_irv_rk_05_03
+, ir.diff_avg_irr_rk_20_10 as ir_diff_avg_irr_rk_20_10
+, ir.diff_avg_irr_rk_20_05 as ir_diff_avg_irr_rk_20_05
+, ir.diff_avg_irr_rk_20_03 as ir_diff_avg_irr_rk_20_03
+, ir.diff_avg_irr_rk_10_05 as ir_diff_avg_irr_rk_10_05
+, ir.diff_avg_irr_rk_10_03 as ir_diff_avg_irr_rk_10_03
+, ir.diff_avg_irr_rk_05_03 as ir_diff_avg_irr_rk_05_03
+, ir.diff_mdn_irv_rk_20_10 as ir_diff_mdn_irv_rk_20_10
+, ir.diff_mdn_irv_rk_20_05 as ir_diff_mdn_irv_rk_20_05
+, ir.diff_mdn_irv_rk_20_03 as ir_diff_mdn_irv_rk_20_03
+, ir.diff_mdn_irv_rk_10_05 as ir_diff_mdn_irv_rk_10_05
+, ir.diff_mdn_irv_rk_10_03 as ir_diff_mdn_irv_rk_10_03
+, ir.diff_mdn_irv_rk_05_03 as ir_diff_mdn_irv_rk_05_03
+, ir.diff_mdn_irr_rk_20_10 as ir_diff_mdn_irr_rk_20_10
+, ir.diff_mdn_irr_rk_20_05 as ir_diff_mdn_irr_rk_20_05
+, ir.diff_mdn_irr_rk_20_03 as ir_diff_mdn_irr_rk_20_03
+, ir.diff_mdn_irr_rk_10_05 as ir_diff_mdn_irr_rk_10_05
+, ir.diff_mdn_irr_rk_10_03 as ir_diff_mdn_irr_rk_10_03
+, ir.diff_mdn_irr_rk_05_03 as ir_diff_mdn_irr_rk_05_03
+, ir.devided_avg_irv_vl_20_10 as ir_devided_avg_irv_vl_20_10
+, ir.devided_avg_irv_vl_20_05 as ir_devided_avg_irv_vl_20_05
+, ir.devided_avg_irv_vl_20_03 as ir_devided_avg_irv_vl_20_03
+, ir.devided_avg_irv_vl_10_05 as ir_devided_avg_irv_vl_10_05
+, ir.devided_avg_irv_vl_10_03 as ir_devided_avg_irv_vl_10_03
+, ir.devided_avg_irv_vl_05_03 as ir_devided_avg_irv_vl_05_03
+, ir.devided_avg_irr_vl_20_10 as ir_devided_avg_irr_vl_20_10
+, ir.devided_avg_irr_vl_20_05 as ir_devided_avg_irr_vl_20_05
+, ir.devided_avg_irr_vl_20_03 as ir_devided_avg_irr_vl_20_03
+, ir.devided_avg_irr_vl_10_05 as ir_devided_avg_irr_vl_10_05
+, ir.devided_avg_irr_vl_10_03 as ir_devided_avg_irr_vl_10_03
+, ir.devided_avg_irr_vl_05_03 as ir_devided_avg_irr_vl_05_03
+, ir.devided_mdn_irv_vl_20_10 as ir_devided_mdn_irv_vl_20_10
+, ir.devided_mdn_irv_vl_20_05 as ir_devided_mdn_irv_vl_20_05
+, ir.devided_mdn_irv_vl_20_03 as ir_devided_mdn_irv_vl_20_03
+, ir.devided_mdn_irv_vl_10_05 as ir_devided_mdn_irv_vl_10_05
+, ir.devided_mdn_irv_vl_10_03 as ir_devided_mdn_irv_vl_10_03
+, ir.devided_mdn_irv_vl_05_03 as ir_devided_mdn_irv_vl_05_03
+, ir.devided_mdn_irr_vl_20_10 as ir_devided_mdn_irr_vl_20_10
+, ir.devided_mdn_irr_vl_20_05 as ir_devided_mdn_irr_vl_20_05
+, ir.devided_mdn_irr_vl_20_03 as ir_devided_mdn_irr_vl_20_03
+, ir.devided_mdn_irr_vl_10_05 as ir_devided_mdn_irr_vl_10_05
+, ir.devided_mdn_irr_vl_10_03 as ir_devided_mdn_irr_vl_10_03
+, ir.devided_mdn_irr_vl_05_03 as ir_devided_mdn_irr_vl_05_03
+, mp.slope_value_05 as mp_slope_value_05
+, mp.slope_rank_05 as mp_slope_rank_05
+, mp.slope_value_10 as mp_slope_value_10
+, mp.slope_rank_10 as mp_slope_rank_10
+, mp.slope_value_20 as mp_slope_value_20
+, mp.slope_rank_20 as mp_slope_rank_20
+, mp.devided_slope20_10 as mp_devided_slope20_10
+, mp.devided_slope20_05 as mp_devided_slope20_05
+, mp.devided_slope10_05 as mp_devided_slope10_05
+, mp.devided_rank20_10 as mp_devided_rank20_10
+, mp.devided_rank20_05 as mp_devided_rank20_05
+, mp.devided_rank10_05 as mp_devided_rank10_05
+, pe.mdn_pe_vl_03 as pe_mdn_pe_vl_03
+, pe.mdn_pe_vl_05 as pe_mdn_pe_vl_05
+, pe.mdn_pe_vl_10 as pe_mdn_pe_vl_10
+, pe.mdn_pe_vl_20 as pe_mdn_pe_vl_20
+, pe.mdn_pe_rk_03 as pe_mdn_pe_rk_03
+, pe.mdn_pe_rk_05 as pe_mdn_pe_rk_05
+, pe.mdn_pe_rk_10 as pe_mdn_pe_rk_10
+, pe.mdn_pe_rk_20 as pe_mdn_pe_rk_20
+, pe.devided_mdn_pe_vl_20_10 as pe_devided_mdn_pe_vl_20_10
+, pe.devided_mdn_pe_vl_20_05 as pe_devided_mdn_pe_vl_20_05
+, pe.devided_mdn_pe_vl_20_03 as pe_devided_mdn_pe_vl_20_03
+, pe.devided_mdn_pe_vl_10_05 as pe_devided_mdn_pe_vl_10_05
+, pe.devided_mdn_pe_vl_10_03 as pe_devided_mdn_pe_vl_10_03
+, pe.devided_mdn_pe_vl_05_03 as pe_devided_mdn_pe_vl_05_03
+, pe.devided_rank20_10 as pe_devided_rank20_10
+, pe.devided_rank20_05 as pe_devided_rank20_05
+, pe.devided_rank20_03 as pe_devided_rank20_03
+, pe.devided_rank10_05 as pe_devided_rank10_05
+, pe.devided_rank10_03 as pe_devided_rank10_03
+, pe.devided_rank05_03 as pe_devided_rank05_03
+, rk.rsv_rk_mdn10 as rk_rsv_rk_mdn10
+, rk.rsv_rk_mdn05 as rk_rsv_rk_mdn05
+, rk.rsv_rk_mdn03 as rk_rsv_rk_mdn03
+, rk.rsv_vl_mdn10 as rk_rsv_vl_mdn10
+, rk.rsv_vl_mdn05 as rk_rsv_vl_mdn05
+, rk.rsv_vl_mdn03 as rk_rsv_vl_mdn03
+, rk.ki_rk_mdn10 as rk_ki_rk_mdn10
+, rk.ki_rk_mdn05 as rk_ki_rk_mdn05
+, rk.ki_rk_mdn03 as rk_ki_rk_mdn03
+, rk.ki_vl_mdn10 as rk_ki_vl_mdn10
+, rk.ki_vl_mdn05 as rk_ki_vl_mdn05
+, rk.ki_vl_mdn03 as rk_ki_vl_mdn03
+, rk.devided_rsv_vl_mdn10_05 as rk_devided_rsv_vl_mdn10_05
+, rk.devided_rsv_vl_mdn10_03 as rk_devided_rsv_vl_mdn10_03
+, rk.devided_rsv_vl_mdn05_03 as rk_devided_rsv_vl_mdn05_03
+, rk.devided_ki_vl_mdn10_05 as rk_devided_ki_vl_mdn10_05
+, rk.devided_ki_vl_mdn10_03 as rk_devided_ki_vl_mdn10_03
+, rk.devided_ki_vl_mdn05_03 as rk_devided_ki_vl_mdn05_03
+, rk.devided_rsv_rank10_05 as rk_devided_rsv_rank10_05
+, rk.devided_rsv_rank10_03 as rk_devided_rsv_rank10_03
+, rk.devided_rsv_rank05_03 as rk_devided_rsv_rank05_03
+, rk.devided_ki_rank10_05 as rk_devided_ki_rank10_05
+, rk.devided_ki_rank10_03 as rk_devided_ki_rank10_03
+, rk.devided_ki_rank05_03 as rk_devided_ki_rank05_03
+, st.mdn_ss_rk_03 as st_mdn_ss_rk_03
+, st.mdn_ss_rk_05 as st_mdn_ss_rk_05
+, st.mdn_ss_rk_10 as st_mdn_ss_rk_10
+, st.mdn_rp_rk_03 as st_mdn_rp_rk_03
+, st.mdn_rp_rk_05 as st_mdn_rp_rk_05
+, st.mdn_rp_rk_10 as st_mdn_rp_rk_10
+, st.devided_ss_rk_20_10 as st_devided_ss_rk_20_10
+, st.devided_ss_rk_20_05 as st_devided_ss_rk_20_05
+, st.devided_ss_rk_10_05 as st_devided_ss_rk_10_05
+, st.devided_rp_rk_20_10 as st_devided_rp_rk_20_10
+, st.devided_rp_rk_20_05 as st_devided_rp_rk_20_05
+, st.devided_rp_rk_10_05 as st_devided_rp_rk_10_05
+, sg.strength05 as sg_strength05
+, sg.strength10 as sg_strength10
+, sg.strength20 as sg_strength20
+, sg.rank20 as sg_rank20
+, sg.rank10 as sg_rank10
+, sg.rank05 as sg_rank05
+, sg.devided_strength20_10 as sg_devided_strength20_10
+, sg.devided_strength20_05 as sg_devided_strength20_05
+, sg.devided_strength10_05 as sg_devided_strength10_05
+, sg.devided_rank20_10 as sg_devided_rank20_10
+, sg.devided_rank20_05 as sg_devided_rank20_05
+, sg.devided_rank10_05 as sg_devided_rank10_05
+
+from (select * from calculation where date_index > 20) c
+inner join feature_ir_scale ir
+on c.code = ir.code and c.record_date = ir.record_date
+inner join feature_mp_scale mp
+on c.code = mp.code and c.record_date = mp.record_date
+inner join feature_pe_scale pe
+on c.code = pe.code and c.record_date = pe.record_date
+inner join feature_rk_scale rk
+on c.code = rk.code and c.record_date = rk.record_date
+inner join feature_st_scale st
+on c.code = st.code and c.record_date = st.record_date
+inner join feature_strength_scale sg
+on c.code = sg.code and c.record_date = sg.record_date
+;
+
+END
+
+$$;
+
+alter function training_performance() owner to postgres;
+
