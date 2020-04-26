@@ -92,6 +92,9 @@ from short_strength ) t ) t ) t where row_number = 5;
 drop table if exists feature_st;
 create temporary table feature_st as 
 select t.code, t.date_index, t.record_date
+, s03.mdn_ss_rk_03, r03.mdn_rp_rk_03
+, s05.mdn_ss_rk_05, r05.mdn_rp_rk_05
+, s10.mdn_ss_rk_10, r10.mdn_rp_rk_10
 from full_transactions t
 left join ss_median03 s03
     on t.code = s03.code and t.date_index = s03.date_index
@@ -106,6 +109,58 @@ left join ss_median10 s10
 left join rp_median10 r10
     on t.code = r10.code and t.date_index = r10.date_index
 ;
+
+drop table if exists feature_st_para;
+create temp table feature_st_para as select 1
+, min(mdn_ss_rk_03) as min_mdn_ss_rk_03 , avg(mdn_ss_rk_03) as avg_mdn_ss_rk_03
+, min(mdn_ss_rk_05) as min_mdn_ss_rk_05 , avg(mdn_ss_rk_05) as avg_mdn_ss_rk_05
+, min(mdn_ss_rk_10) as min_mdn_ss_rk_10 , avg(mdn_ss_rk_10) as avg_mdn_ss_rk_10
+, min(mdn_rp_rk_03) as min_mdn_rp_rk_03 , avg(mdn_rp_rk_03) as avg_mdn_rp_rk_03
+, min(mdn_rp_rk_05) as min_mdn_rp_rk_05 , avg(mdn_rp_rk_05) as avg_mdn_rp_rk_05
+, min(mdn_rp_rk_10) as min_mdn_rp_rk_10 , avg(mdn_rp_rk_10) as avg_mdn_rp_rk_10
+from feature_st;
+
+drop table if exists feature_st_temp;
+create temp table feature_st_temp as select code, record_date, date_index
+, (mdn_ss_rk_03 - min_mdn_ss_rk_03) / (avg_mdn_ss_rk_03 - min_mdn_ss_rk_03) as mdn_ss_rk_03
+, (mdn_ss_rk_05 - min_mdn_ss_rk_05) / (avg_mdn_ss_rk_05 - min_mdn_ss_rk_05) as mdn_ss_rk_05
+, (mdn_ss_rk_10 - min_mdn_ss_rk_10) / (avg_mdn_ss_rk_10 - min_mdn_ss_rk_10) as mdn_ss_rk_10
+, (mdn_rp_rk_03 - min_mdn_rp_rk_03) / (avg_mdn_rp_rk_03 - min_mdn_rp_rk_03) as mdn_rp_rk_03
+, (mdn_rp_rk_05 - min_mdn_rp_rk_05) / (avg_mdn_rp_rk_05 - min_mdn_rp_rk_05) as mdn_rp_rk_05
+, (mdn_rp_rk_10 - min_mdn_rp_rk_10) / (avg_mdn_rp_rk_10 - min_mdn_rp_rk_10) as mdn_rp_rk_10
+, mdn_ss_rk_10 - mdn_ss_rk_05 as diff_mdn_ss_rk_10_05
+, mdn_ss_rk_10 - mdn_ss_rk_03 as diff_mdn_ss_rk_10_03
+, mdn_ss_rk_05 - mdn_ss_rk_03 as diff_mdn_ss_rk_05_03
+, mdn_rp_rk_10 - mdn_rp_rk_05 as diff_mdn_rp_rk_10_05
+, mdn_rp_rk_10 - mdn_rp_rk_03 as diff_mdn_rp_rk_10_03
+, mdn_rp_rk_05 - mdn_rp_rk_03 as diff_mdn_rp_rk_05_03
+from feature_st cross join feature_st_para;
+
+drop table if exists feature_st_temp_para;
+create temp table feature_st_temp_para as select 1
+, min(diff_mdn_ss_rk_10_05) as min_diff_mdn_ss_rk_10_05, avg(diff_mdn_ss_rk_10_05) as avg_diff_mdn_ss_rk_10_05
+, min(diff_mdn_ss_rk_10_03) as min_diff_mdn_ss_rk_10_03, avg(diff_mdn_ss_rk_10_03) as avg_diff_mdn_ss_rk_10_03
+, min(diff_mdn_ss_rk_05_03) as min_diff_mdn_ss_rk_05_03, avg(diff_mdn_ss_rk_05_03) as avg_diff_mdn_ss_rk_05_03
+, min(diff_mdn_rp_rk_10_05) as min_diff_mdn_rp_rk_10_05, avg(diff_mdn_rp_rk_10_05) as avg_diff_mdn_rp_rk_10_05
+, min(diff_mdn_rp_rk_10_03) as min_diff_mdn_rp_rk_10_03, avg(diff_mdn_rp_rk_10_03) as avg_diff_mdn_rp_rk_10_03
+, min(diff_mdn_rp_rk_05_03) as min_diff_mdn_rp_rk_05_03, avg(diff_mdn_rp_rk_05_03) as avg_diff_mdn_rp_rk_05_03
+from feature_st_temp;
+
+drop table if exists feature_st_scale;
+create temp table feature_st_scale as select code, record_date, date_index
+, cast((1/(1+EXP(0-(mdn_ss_rk_03))))*2-1 as decimal(5,3)) as mdn_ss_rk_03
+, cast((1/(1+EXP(0-(mdn_ss_rk_05))))*2-1 as decimal(5,3)) as mdn_ss_rk_05
+, cast((1/(1+EXP(0-(mdn_ss_rk_10))))*2-1 as decimal(5,3)) as mdn_ss_rk_10
+, cast((1/(1+EXP(0-(mdn_rp_rk_03))))*2-1 as decimal(5,3)) as mdn_rp_rk_03
+, cast((1/(1+EXP(0-(mdn_rp_rk_05))))*2-1 as decimal(5,3)) as mdn_rp_rk_05
+, cast((1/(1+EXP(0-(mdn_rp_rk_10))))*2-1 as decimal(5,3)) as mdn_rp_rk_10
+, case when avg_diff_mdn_ss_rk_10_05 = min_diff_mdn_ss_rk_10_05 then 1 else cast((1/(1+EXP(0-(diff_mdn_ss_rk_10_05 - min_diff_mdn_ss_rk_10_05) / (avg_diff_mdn_ss_rk_10_05 - min_diff_mdn_ss_rk_10_05))))*2-1 as decimal(5,3)) end as devided_ss_rk_20_10
+, case when avg_diff_mdn_ss_rk_10_03 = min_diff_mdn_ss_rk_10_03 then 1 else cast((1/(1+EXP(0-(diff_mdn_ss_rk_10_03 - min_diff_mdn_ss_rk_10_03) / (avg_diff_mdn_ss_rk_10_03 - min_diff_mdn_ss_rk_10_03))))*2-1 as decimal(5,3)) end as devided_ss_rk_20_05
+, case when avg_diff_mdn_ss_rk_05_03 = min_diff_mdn_ss_rk_05_03 then 1 else cast((1/(1+EXP(0-(diff_mdn_ss_rk_05_03 - min_diff_mdn_ss_rk_05_03) / (avg_diff_mdn_ss_rk_05_03 - min_diff_mdn_ss_rk_05_03))))*2-1 as decimal(5,3)) end as devided_ss_rk_10_05
+, case when avg_diff_mdn_rp_rk_10_05 = min_diff_mdn_rp_rk_10_05 then 1 else cast((1/(1+EXP(0-(diff_mdn_rp_rk_10_05 - min_diff_mdn_rp_rk_10_05) / (avg_diff_mdn_rp_rk_10_05 - min_diff_mdn_rp_rk_10_05))))*2-1 as decimal(5,3)) end as devided_rp_rk_20_10
+, case when avg_diff_mdn_rp_rk_10_03 = min_diff_mdn_rp_rk_10_03 then 1 else cast((1/(1+EXP(0-(diff_mdn_rp_rk_10_03 - min_diff_mdn_rp_rk_10_03) / (avg_diff_mdn_rp_rk_10_03 - min_diff_mdn_rp_rk_10_03))))*2-1 as decimal(5,3)) end as devided_rp_rk_20_05
+, case when avg_diff_mdn_rp_rk_05_03 = min_diff_mdn_rp_rk_05_03 then 1 else cast((1/(1+EXP(0-(diff_mdn_rp_rk_05_03 - min_diff_mdn_rp_rk_05_03) / (avg_diff_mdn_rp_rk_05_03 - min_diff_mdn_rp_rk_05_03))))*2-1 as decimal(5,3)) end as devided_rp_rk_10_05
+from feature_st_temp cross join feature_st_temp_para;
 
 END
 
