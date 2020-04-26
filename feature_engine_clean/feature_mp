@@ -95,6 +95,54 @@ left join temp10
 on t.code = temp10.code and t.date_index = temp10.date_index
 left join temp20
 on t.code = temp20.code and t.date_index = temp20.date_index ;
+
+
+drop table if exists feature_mp_para;
+create temp table feature_mp_para as select 1
+, min(slope_value_05) as min_slope_value_05, avg(slope_value_05) as avg_slope_value_05
+, min(slope_rank_05) as min_slope_rank_05, avg(slope_rank_05) as avg_slope_rank_05
+, min(slope_value_10) as min_slope_value_10, avg(slope_value_10) as avg_slope_value_10
+, min(slope_rank_10) as min_slope_rank_10, avg(slope_rank_10) as avg_slope_rank_10
+, min(slope_value_20) as min_slope_value_20, avg(slope_value_20) as avg_slope_value_20
+, min(slope_rank_20) as min_slope_rank_20, avg(slope_rank_20) as avg_slope_rank_20
+from feature_mp;
+
+drop table if exists feature_mp_temp;
+create temp table feature_mp_temp as select code, record_date, date_index
+, (slope_value_05 - min_slope_value_05) / (avg_slope_value_05 - min_slope_value_05) as slope_value_05
+, (slope_rank_05 - min_slope_rank_05) / (avg_slope_rank_05 - min_slope_rank_05)     as slope_rank_05
+, (slope_value_10 - min_slope_value_10) / (avg_slope_value_10 - min_slope_value_10) as slope_value_10
+, (slope_rank_10 - min_slope_rank_10) / (avg_slope_rank_10 - min_slope_rank_10)     as slope_rank_10
+, (slope_value_20 - min_slope_value_20) / (avg_slope_value_20 - min_slope_value_20) as slope_value_20
+, (slope_rank_20 - min_slope_rank_20) / (avg_slope_rank_20 - min_slope_rank_20)     as slope_rank_20
+, slope_rank_20 - slope_rank_10 as diff_slope_rank_20_10
+, slope_rank_20 - slope_rank_05 as diff_slope_rank_20_05
+, slope_rank_10 - slope_rank_05 as diff_slope_rank_10_05
+from feature_mp cross join feature_mp_para;
+
+drop table if exists feature_mp_rank_para;
+create temp table feature_mp_rank_para as select 1
+, min(diff_slope_rank_20_10) as min_diff_slope_rank_20_10 , avg(diff_slope_rank_20_10) as avg_diff_slope_rank_20_10
+, min(diff_slope_rank_20_05) as min_diff_slope_rank_20_05 , avg(diff_slope_rank_20_05) as avg_diff_slope_rank_20_05
+, min(diff_slope_rank_10_05) as min_diff_slope_rank_10_05 , avg(diff_slope_rank_10_05) as avg_diff_slope_rank_10_05
+from feature_mp_temp;
+
+drop table if exists feature_mp_scale;
+create temp table feature_mp_scale as select code, record_date, date_index
+, cast((1/(1+EXP(0-(slope_value_05 ))))*2-1 as decimal(5,3)) as slope_value_05
+, cast((1/(1+EXP(0-(slope_rank_05  ))))*2-1 as decimal(5,3)) as slope_rank_05
+, cast((1/(1+EXP(0-(slope_value_10 ))))*2-1 as decimal(5,3)) as slope_value_10
+, cast((1/(1+EXP(0-(slope_rank_10  ))))*2-1 as decimal(5,3)) as slope_rank_10
+, cast((1/(1+EXP(0-(slope_value_20 ))))*2-1 as decimal(5,3)) as slope_value_20
+, cast((1/(1+EXP(0-(slope_rank_20  ))))*2-1 as decimal(5,3)) as slope_rank_20
+, case when slope_value_10= 0 then 1 else cast((1/(1+EXP(0-slope_value_20 / slope_value_10)))*2-1 as decimal(5,3)) end as devided_slope20_10
+, case when slope_value_05= 0 then 1 else cast((1/(1+EXP(0-slope_value_20 / slope_value_05)))*2-1 as decimal(5,3)) end as devided_slope20_05
+, case when slope_value_05= 0 then 1 else cast((1/(1+EXP(0-slope_value_10 / slope_value_05)))*2-1 as decimal(5,3)) end as devided_slope10_05
+, case when avg_diff_slope_rank_20_10 = min_diff_slope_rank_20_10 then 1 else cast((1/(1+EXP(0-(diff_slope_rank_20_10 - min_diff_slope_rank_20_10) / (avg_diff_slope_rank_20_10 - min_diff_slope_rank_20_10))))*2-1 as decimal(5,3)) end as devided_rank20_10
+, case when avg_diff_slope_rank_20_05 = min_diff_slope_rank_20_05 then 1 else cast((1/(1+EXP(0-(diff_slope_rank_20_05 - min_diff_slope_rank_20_05) / (avg_diff_slope_rank_20_05 - min_diff_slope_rank_20_05))))*2-1 as decimal(5,3)) end as devided_rank20_05
+, case when avg_diff_slope_rank_10_05 = min_diff_slope_rank_10_05 then 1 else cast((1/(1+EXP(0-(diff_slope_rank_10_05 - min_diff_slope_rank_10_05) / (avg_diff_slope_rank_10_05 - min_diff_slope_rank_10_05))))*2-1 as decimal(5,3)) end as devided_rank10_05
+from feature_mp_temp cross join feature_mp_rank_para;
+
 END
 
 $$;
