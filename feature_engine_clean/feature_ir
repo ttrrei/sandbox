@@ -275,8 +275,221 @@ left join irr_median20
 on t.code = irr_median20.code and t.date_index = irr_median20.date_index
 ;
 
+drop table if exists feature_ir_para;
+create temp table feature_ir_para as select 1
+, min(avg_irv_vl_03) as min_avg_irv_vl_03, avg(avg_irv_vl_03) as avg_avg_irv_vl_03
+, min(avg_irv_vl_05) as min_avg_irv_vl_05, avg(avg_irv_vl_05) as avg_avg_irv_vl_05
+, min(avg_irv_vl_10) as min_avg_irv_vl_10, avg(avg_irv_vl_10) as avg_avg_irv_vl_10
+, min(avg_irv_vl_20) as min_avg_irv_vl_20, avg(avg_irv_vl_20) as avg_avg_irv_vl_20
+, min(avg_irv_rk_03) as min_avg_irv_rk_03, avg(avg_irv_rk_03) as avg_avg_irv_rk_03
+, min(avg_irv_rk_05) as min_avg_irv_rk_05, avg(avg_irv_rk_05) as avg_avg_irv_rk_05
+, min(avg_irv_rk_10) as min_avg_irv_rk_10, avg(avg_irv_rk_10) as avg_avg_irv_rk_10
+, min(avg_irv_rk_20) as min_avg_irv_rk_20, avg(avg_irv_rk_20) as avg_avg_irv_rk_20
+, min(avg_irr_vl_03) as min_avg_irr_vl_03, avg(avg_irr_vl_03) as avg_avg_irr_vl_03
+, min(avg_irr_vl_05) as min_avg_irr_vl_05, avg(avg_irr_vl_05) as avg_avg_irr_vl_05
+, min(avg_irr_vl_10) as min_avg_irr_vl_10, avg(avg_irr_vl_10) as avg_avg_irr_vl_10
+, min(avg_irr_vl_20) as min_avg_irr_vl_20, avg(avg_irr_vl_20) as avg_avg_irr_vl_20
+, min(avg_irr_rk_03) as min_avg_irr_rk_03, avg(avg_irr_rk_03) as avg_avg_irr_rk_03
+, min(avg_irr_rk_05) as min_avg_irr_rk_05, avg(avg_irr_rk_05) as avg_avg_irr_rk_05
+, min(avg_irr_rk_10) as min_avg_irr_rk_10, avg(avg_irr_rk_10) as avg_avg_irr_rk_10
+, min(avg_irr_rk_20) as min_avg_irr_rk_20, avg(avg_irr_rk_20) as avg_avg_irr_rk_20
+, min(mdn_irv_vl_03) as min_mdn_irv_vl_03, avg(mdn_irv_vl_03) as avg_mdn_irv_vl_03
+, min(mdn_irv_vl_05) as min_mdn_irv_vl_05, avg(mdn_irv_vl_05) as avg_mdn_irv_vl_05
+, min(mdn_irv_vl_10) as min_mdn_irv_vl_10, avg(mdn_irv_vl_10) as avg_mdn_irv_vl_10
+, min(mdn_irv_vl_20) as min_mdn_irv_vl_20, avg(mdn_irv_vl_20) as avg_mdn_irv_vl_20
+, min(mdn_irv_rk_03) as min_mdn_irv_rk_03, avg(mdn_irv_rk_03) as avg_mdn_irv_rk_03
+, min(mdn_irv_rk_05) as min_mdn_irv_rk_05, avg(mdn_irv_rk_05) as avg_mdn_irv_rk_05
+, min(mdn_irv_rk_10) as min_mdn_irv_rk_10, avg(mdn_irv_rk_10) as avg_mdn_irv_rk_10
+, min(mdn_irv_rk_20) as min_mdn_irv_rk_20, avg(mdn_irv_rk_20) as avg_mdn_irv_rk_20
+, min(mdn_irr_vl_03) as min_mdn_irr_vl_03, avg(mdn_irr_vl_03) as avg_mdn_irr_vl_03
+, min(mdn_irr_vl_05) as min_mdn_irr_vl_05, avg(mdn_irr_vl_05) as avg_mdn_irr_vl_05
+, min(mdn_irr_vl_10) as min_mdn_irr_vl_10, avg(mdn_irr_vl_10) as avg_mdn_irr_vl_10
+, min(mdn_irr_vl_20) as min_mdn_irr_vl_20, avg(mdn_irr_vl_20) as avg_mdn_irr_vl_20
+, min(mdn_irr_rk_03) as min_mdn_irr_rk_03, avg(mdn_irr_rk_03) as avg_mdn_irr_rk_03
+, min(mdn_irr_rk_05) as min_mdn_irr_rk_05, avg(mdn_irr_rk_05) as avg_mdn_irr_rk_05
+, min(mdn_irr_rk_10) as min_mdn_irr_rk_10, avg(mdn_irr_rk_10) as avg_mdn_irr_rk_10
+, min(mdn_irr_rk_20) as min_mdn_irr_rk_20, avg(mdn_irr_rk_20) as avg_mdn_irr_rk_20
+from feature_ir;
+
+drop table if exists feature_ir_scale_temp;
+create temp table feature_ir_scale_temp as select code, record_date, date_index
+,avg_irv_rk_20 - avg_irv_rk_10 as diff_avg_irv_rk_20_10
+,avg_irv_rk_20 - avg_irv_rk_05 as diff_avg_irv_rk_20_05
+,avg_irv_rk_20 - avg_irv_rk_03 as diff_avg_irv_rk_20_03
+,avg_irv_rk_10 - avg_irv_rk_05 as diff_avg_irv_rk_10_05
+,avg_irv_rk_10 - avg_irv_rk_03 as diff_avg_irv_rk_10_03
+,avg_irv_rk_05 - avg_irv_rk_03 as diff_avg_irv_rk_05_03
+,avg_irr_rk_20 - avg_irr_rk_10 as diff_avg_irr_rk_20_10
+,avg_irr_rk_20 - avg_irr_rk_05 as diff_avg_irr_rk_20_05
+,avg_irr_rk_20 - avg_irr_rk_03 as diff_avg_irr_rk_20_03
+,avg_irr_rk_10 - avg_irr_rk_05 as diff_avg_irr_rk_10_05
+,avg_irr_rk_10 - avg_irr_rk_03 as diff_avg_irr_rk_10_03
+,avg_irr_rk_05 - avg_irr_rk_03 as diff_avg_irr_rk_05_03
+,mdn_irv_rk_20 - mdn_irv_rk_10 as diff_mdn_irv_rk_20_10
+,mdn_irv_rk_20 - mdn_irv_rk_05 as diff_mdn_irv_rk_20_05
+,mdn_irv_rk_20 - mdn_irv_rk_03 as diff_mdn_irv_rk_20_03
+,mdn_irv_rk_10 - mdn_irv_rk_05 as diff_mdn_irv_rk_10_05
+,mdn_irv_rk_10 - mdn_irv_rk_03 as diff_mdn_irv_rk_10_03
+,mdn_irv_rk_05 - mdn_irv_rk_03 as diff_mdn_irv_rk_05_03
+,mdn_irr_rk_20 - mdn_irr_rk_10 as diff_mdn_irr_rk_20_10
+,mdn_irr_rk_20 - mdn_irr_rk_05 as diff_mdn_irr_rk_20_05
+,mdn_irr_rk_20 - mdn_irr_rk_03 as diff_mdn_irr_rk_20_03
+,mdn_irr_rk_10 - mdn_irr_rk_05 as diff_mdn_irr_rk_10_05
+,mdn_irr_rk_10 - mdn_irr_rk_03 as diff_mdn_irr_rk_10_03
+,mdn_irr_rk_05 - mdn_irr_rk_03 as diff_mdn_irr_rk_05_03
+, (avg_irv_vl_03 - min_avg_irv_vl_03) / (avg_avg_irv_vl_03 - min_avg_irv_vl_03) as avg_irv_vl_03
+, (avg_irv_vl_05 - min_avg_irv_vl_05) / (avg_avg_irv_vl_05 - min_avg_irv_vl_05) as avg_irv_vl_05
+, (avg_irv_vl_10 - min_avg_irv_vl_10) / (avg_avg_irv_vl_10 - min_avg_irv_vl_10) as avg_irv_vl_10
+, (avg_irv_vl_20 - min_avg_irv_vl_20) / (avg_avg_irv_vl_20 - min_avg_irv_vl_20) as avg_irv_vl_20
+, (avg_irv_rk_03 - min_avg_irv_rk_03) / (avg_avg_irv_rk_03 - min_avg_irv_rk_03) as avg_irv_rk_03
+, (avg_irv_rk_05 - min_avg_irv_rk_05) / (avg_avg_irv_rk_05 - min_avg_irv_rk_05) as avg_irv_rk_05
+, (avg_irv_rk_10 - min_avg_irv_rk_10) / (avg_avg_irv_rk_10 - min_avg_irv_rk_10) as avg_irv_rk_10
+, (avg_irv_rk_20 - min_avg_irv_rk_20) / (avg_avg_irv_rk_20 - min_avg_irv_rk_20) as avg_irv_rk_20
+, (avg_irr_vl_03 - min_avg_irr_vl_03) / (avg_avg_irr_vl_03 - min_avg_irr_vl_03) as avg_irr_vl_03
+, (avg_irr_vl_05 - min_avg_irr_vl_05) / (avg_avg_irr_vl_05 - min_avg_irr_vl_05) as avg_irr_vl_05
+, (avg_irr_vl_10 - min_avg_irr_vl_10) / (avg_avg_irr_vl_10 - min_avg_irr_vl_10) as avg_irr_vl_10
+, (avg_irr_vl_20 - min_avg_irr_vl_20) / (avg_avg_irr_vl_20 - min_avg_irr_vl_20) as avg_irr_vl_20
+, (avg_irr_rk_03 - min_avg_irr_rk_03) / (avg_avg_irr_rk_03 - min_avg_irr_rk_03) as avg_irr_rk_03
+, (avg_irr_rk_05 - min_avg_irr_rk_05) / (avg_avg_irr_rk_05 - min_avg_irr_rk_05) as avg_irr_rk_05
+, (avg_irr_rk_10 - min_avg_irr_rk_10) / (avg_avg_irr_rk_10 - min_avg_irr_rk_10) as avg_irr_rk_10
+, (avg_irr_rk_20 - min_avg_irr_rk_20) / (avg_avg_irr_rk_20 - min_avg_irr_rk_20) as avg_irr_rk_20
+, (mdn_irv_vl_03 - min_mdn_irv_vl_03) / (avg_mdn_irv_vl_03 - min_mdn_irv_vl_03) as mdn_irv_vl_03
+, (mdn_irv_vl_05 - min_mdn_irv_vl_05) / (avg_mdn_irv_vl_05 - min_mdn_irv_vl_05) as mdn_irv_vl_05
+, (mdn_irv_vl_10 - min_mdn_irv_vl_10) / (avg_mdn_irv_vl_10 - min_mdn_irv_vl_10) as mdn_irv_vl_10
+, (mdn_irv_vl_20 - min_mdn_irv_vl_20) / (avg_mdn_irv_vl_20 - min_mdn_irv_vl_20) as mdn_irv_vl_20
+, (mdn_irv_rk_03 - min_mdn_irv_rk_03) / (avg_mdn_irv_rk_03 - min_mdn_irv_rk_03) as mdn_irv_rk_03
+, (mdn_irv_rk_05 - min_mdn_irv_rk_05) / (avg_mdn_irv_rk_05 - min_mdn_irv_rk_05) as mdn_irv_rk_05
+, (mdn_irv_rk_10 - min_mdn_irv_rk_10) / (avg_mdn_irv_rk_10 - min_mdn_irv_rk_10) as mdn_irv_rk_10
+, (mdn_irv_rk_20 - min_mdn_irv_rk_20) / (avg_mdn_irv_rk_20 - min_mdn_irv_rk_20) as mdn_irv_rk_20
+, (mdn_irr_vl_03 - min_mdn_irr_vl_03) / (avg_mdn_irr_vl_03 - min_mdn_irr_vl_03) as mdn_irr_vl_03
+, (mdn_irr_vl_05 - min_mdn_irr_vl_05) / (avg_mdn_irr_vl_05 - min_mdn_irr_vl_05) as mdn_irr_vl_05
+, (mdn_irr_vl_10 - min_mdn_irr_vl_10) / (avg_mdn_irr_vl_10 - min_mdn_irr_vl_10) as mdn_irr_vl_10
+, (mdn_irr_vl_20 - min_mdn_irr_vl_20) / (avg_mdn_irr_vl_20 - min_mdn_irr_vl_20) as mdn_irr_vl_20
+, (mdn_irr_rk_03 - min_mdn_irr_rk_03) / (avg_mdn_irr_rk_03 - min_mdn_irr_rk_03) as mdn_irr_rk_03
+, (mdn_irr_rk_05 - min_mdn_irr_rk_05) / (avg_mdn_irr_rk_05 - min_mdn_irr_rk_05) as mdn_irr_rk_05
+, (mdn_irr_rk_10 - min_mdn_irr_rk_10) / (avg_mdn_irr_rk_10 - min_mdn_irr_rk_10) as mdn_irr_rk_10
+, (mdn_irr_rk_20 - min_mdn_irr_rk_20) / (avg_mdn_irr_rk_20 - min_mdn_irr_rk_20) as mdn_irr_rk_20
+from feature_ir cross join feature_ir_para;
+
+
+drop table if exists feature_ir_scale_diff_para;
+create temp table feature_ir_scale_diff_para as select 1
+,min(diff_avg_irv_rk_20_10) as min_diff_avg_irv_rk_20_10, avg(diff_avg_irv_rk_20_10) as avg_diff_avg_irv_rk_20_10
+,min(diff_avg_irv_rk_20_05) as min_diff_avg_irv_rk_20_05, avg(diff_avg_irv_rk_20_05) as avg_diff_avg_irv_rk_20_05
+,min(diff_avg_irv_rk_20_03) as min_diff_avg_irv_rk_20_03, avg(diff_avg_irv_rk_20_03) as avg_diff_avg_irv_rk_20_03
+,min(diff_avg_irv_rk_10_05) as min_diff_avg_irv_rk_10_05, avg(diff_avg_irv_rk_10_05) as avg_diff_avg_irv_rk_10_05
+,min(diff_avg_irv_rk_10_03) as min_diff_avg_irv_rk_10_03, avg(diff_avg_irv_rk_10_03) as avg_diff_avg_irv_rk_10_03
+,min(diff_avg_irv_rk_05_03) as min_diff_avg_irv_rk_05_03, avg(diff_avg_irv_rk_05_03) as avg_diff_avg_irv_rk_05_03
+,min(diff_avg_irr_rk_20_10) as min_diff_avg_irr_rk_20_10, avg(diff_avg_irr_rk_20_10) as avg_diff_avg_irr_rk_20_10
+,min(diff_avg_irr_rk_20_05) as min_diff_avg_irr_rk_20_05, avg(diff_avg_irr_rk_20_05) as avg_diff_avg_irr_rk_20_05
+,min(diff_avg_irr_rk_20_03) as min_diff_avg_irr_rk_20_03, avg(diff_avg_irr_rk_20_03) as avg_diff_avg_irr_rk_20_03
+,min(diff_avg_irr_rk_10_05) as min_diff_avg_irr_rk_10_05, avg(diff_avg_irr_rk_10_05) as avg_diff_avg_irr_rk_10_05
+,min(diff_avg_irr_rk_10_03) as min_diff_avg_irr_rk_10_03, avg(diff_avg_irr_rk_10_03) as avg_diff_avg_irr_rk_10_03
+,min(diff_avg_irr_rk_05_03) as min_diff_avg_irr_rk_05_03, avg(diff_avg_irr_rk_05_03) as avg_diff_avg_irr_rk_05_03
+,min(diff_mdn_irv_rk_20_10) as min_diff_mdn_irv_rk_20_10, avg(diff_mdn_irv_rk_20_10) as avg_diff_mdn_irv_rk_20_10
+,min(diff_mdn_irv_rk_20_05) as min_diff_mdn_irv_rk_20_05, avg(diff_mdn_irv_rk_20_05) as avg_diff_mdn_irv_rk_20_05
+,min(diff_mdn_irv_rk_20_03) as min_diff_mdn_irv_rk_20_03, avg(diff_mdn_irv_rk_20_03) as avg_diff_mdn_irv_rk_20_03
+,min(diff_mdn_irv_rk_10_05) as min_diff_mdn_irv_rk_10_05, avg(diff_mdn_irv_rk_10_05) as avg_diff_mdn_irv_rk_10_05
+,min(diff_mdn_irv_rk_10_03) as min_diff_mdn_irv_rk_10_03, avg(diff_mdn_irv_rk_10_03) as avg_diff_mdn_irv_rk_10_03
+,min(diff_mdn_irv_rk_05_03) as min_diff_mdn_irv_rk_05_03, avg(diff_mdn_irv_rk_05_03) as avg_diff_mdn_irv_rk_05_03
+,min(diff_mdn_irr_rk_20_10) as min_diff_mdn_irr_rk_20_10, avg(diff_mdn_irr_rk_20_10) as avg_diff_mdn_irr_rk_20_10
+,min(diff_mdn_irr_rk_20_05) as min_diff_mdn_irr_rk_20_05, avg(diff_mdn_irr_rk_20_05) as avg_diff_mdn_irr_rk_20_05
+,min(diff_mdn_irr_rk_20_03) as min_diff_mdn_irr_rk_20_03, avg(diff_mdn_irr_rk_20_03) as avg_diff_mdn_irr_rk_20_03
+,min(diff_mdn_irr_rk_10_05) as min_diff_mdn_irr_rk_10_05, avg(diff_mdn_irr_rk_10_05) as avg_diff_mdn_irr_rk_10_05
+,min(diff_mdn_irr_rk_10_03) as min_diff_mdn_irr_rk_10_03, avg(diff_mdn_irr_rk_10_03) as avg_diff_mdn_irr_rk_10_03
+,min(diff_mdn_irr_rk_05_03) as min_diff_mdn_irr_rk_05_03, avg(diff_mdn_irr_rk_05_03) as avg_diff_mdn_irr_rk_05_03
+from feature_ir_scale_temp;
+
+drop table if exists feature_ir_scale;
+create temp table feature_ir_scale as select code, record_date, date_index
+, cast((1/(1+EXP(0-avg_irv_vl_03)))*2-1 as decimal(5,3)) as avg_irv_vl_03
+, cast((1/(1+EXP(0-avg_irv_vl_05)))*2-1 as decimal(5,3)) as avg_irv_vl_05
+, cast((1/(1+EXP(0-avg_irv_vl_10)))*2-1 as decimal(5,3)) as avg_irv_vl_10
+, cast((1/(1+EXP(0-avg_irv_vl_20)))*2-1 as decimal(5,3)) as avg_irv_vl_20
+, cast((1/(1+EXP(0-avg_irv_rk_03)))*2-1 as decimal(5,3)) as avg_irv_rk_03
+, cast((1/(1+EXP(0-avg_irv_rk_05)))*2-1 as decimal(5,3)) as avg_irv_rk_05
+, cast((1/(1+EXP(0-avg_irv_rk_10)))*2-1 as decimal(5,3)) as avg_irv_rk_10
+, cast((1/(1+EXP(0-avg_irv_rk_20)))*2-1 as decimal(5,3)) as avg_irv_rk_20
+, cast((1/(1+EXP(0-avg_irr_vl_03)))*2-1 as decimal(5,3)) as avg_irr_vl_03
+, cast((1/(1+EXP(0-avg_irr_vl_05)))*2-1 as decimal(5,3)) as avg_irr_vl_05
+, cast((1/(1+EXP(0-avg_irr_vl_10)))*2-1 as decimal(5,3)) as avg_irr_vl_10
+, cast((1/(1+EXP(0-avg_irr_vl_20)))*2-1 as decimal(5,3)) as avg_irr_vl_20
+, cast((1/(1+EXP(0-avg_irr_rk_03)))*2-1 as decimal(5,3)) as avg_irr_rk_03
+, cast((1/(1+EXP(0-avg_irr_rk_05)))*2-1 as decimal(5,3)) as avg_irr_rk_05
+, cast((1/(1+EXP(0-avg_irr_rk_10)))*2-1 as decimal(5,3)) as avg_irr_rk_10
+, cast((1/(1+EXP(0-avg_irr_rk_20)))*2-1 as decimal(5,3)) as avg_irr_rk_20
+, cast((1/(1+EXP(0-mdn_irv_vl_03)))*2-1 as decimal(5,3)) as mdn_irv_vl_03
+, cast((1/(1+EXP(0-mdn_irv_vl_05)))*2-1 as decimal(5,3)) as mdn_irv_vl_05
+, cast((1/(1+EXP(0-mdn_irv_vl_10)))*2-1 as decimal(5,3)) as mdn_irv_vl_10
+, cast((1/(1+EXP(0-mdn_irv_vl_20)))*2-1 as decimal(5,3)) as mdn_irv_vl_20
+, cast((1/(1+EXP(0-mdn_irv_rk_03)))*2-1 as decimal(5,3)) as mdn_irv_rk_03
+, cast((1/(1+EXP(0-mdn_irv_rk_05)))*2-1 as decimal(5,3)) as mdn_irv_rk_05
+, cast((1/(1+EXP(0-mdn_irv_rk_10)))*2-1 as decimal(5,3)) as mdn_irv_rk_10
+, cast((1/(1+EXP(0-mdn_irv_rk_20)))*2-1 as decimal(5,3)) as mdn_irv_rk_20
+, cast((1/(1+EXP(0-mdn_irr_vl_03)))*2-1 as decimal(5,3)) as mdn_irr_vl_03
+, cast((1/(1+EXP(0-mdn_irr_vl_05)))*2-1 as decimal(5,3)) as mdn_irr_vl_05
+, cast((1/(1+EXP(0-mdn_irr_vl_10)))*2-1 as decimal(5,3)) as mdn_irr_vl_10
+, cast((1/(1+EXP(0-mdn_irr_vl_20)))*2-1 as decimal(5,3)) as mdn_irr_vl_20
+, cast((1/(1+EXP(0-mdn_irr_rk_03)))*2-1 as decimal(5,3)) as mdn_irr_rk_03
+, cast((1/(1+EXP(0-mdn_irr_rk_05)))*2-1 as decimal(5,3)) as mdn_irr_rk_05
+, cast((1/(1+EXP(0-mdn_irr_rk_10)))*2-1 as decimal(5,3)) as mdn_irr_rk_10
+, cast((1/(1+EXP(0-mdn_irr_rk_20)))*2-1 as decimal(5,3)) as mdn_irr_rk_20
+
+, cast((1/(1+EXP(0-(diff_avg_irv_rk_20_10 - min_diff_avg_irv_rk_20_10) / (avg_diff_avg_irv_rk_20_10 - min_diff_avg_irv_rk_20_10 ))))*2-1 as decimal(5,3)) as diff_avg_irv_rk_20_10
+, cast((1/(1+EXP(0-(diff_avg_irv_rk_20_05 - min_diff_avg_irv_rk_20_05) / (avg_diff_avg_irv_rk_20_05 - min_diff_avg_irv_rk_20_05 ))))*2-1 as decimal(5,3)) as diff_avg_irv_rk_20_05
+, cast((1/(1+EXP(0-(diff_avg_irv_rk_20_03 - min_diff_avg_irv_rk_20_03) / (avg_diff_avg_irv_rk_20_03 - min_diff_avg_irv_rk_20_03 ))))*2-1 as decimal(5,3)) as diff_avg_irv_rk_20_03
+, cast((1/(1+EXP(0-(diff_avg_irv_rk_10_05 - min_diff_avg_irv_rk_10_05) / (avg_diff_avg_irv_rk_10_05 - min_diff_avg_irv_rk_10_05 ))))*2-1 as decimal(5,3)) as diff_avg_irv_rk_10_05
+, cast((1/(1+EXP(0-(diff_avg_irv_rk_10_03 - min_diff_avg_irv_rk_10_03) / (avg_diff_avg_irv_rk_10_03 - min_diff_avg_irv_rk_10_03 ))))*2-1 as decimal(5,3)) as diff_avg_irv_rk_10_03
+, cast((1/(1+EXP(0-(diff_avg_irv_rk_05_03 - min_diff_avg_irv_rk_05_03) / (avg_diff_avg_irv_rk_05_03 - min_diff_avg_irv_rk_05_03 ))))*2-1 as decimal(5,3)) as diff_avg_irv_rk_05_03
+, cast((1/(1+EXP(0-(diff_avg_irr_rk_20_10 - min_diff_avg_irr_rk_20_10) / (avg_diff_avg_irr_rk_20_10 - min_diff_avg_irr_rk_20_10 ))))*2-1 as decimal(5,3)) as diff_avg_irr_rk_20_10
+, cast((1/(1+EXP(0-(diff_avg_irr_rk_20_05 - min_diff_avg_irr_rk_20_05) / (avg_diff_avg_irr_rk_20_05 - min_diff_avg_irr_rk_20_05 ))))*2-1 as decimal(5,3)) as diff_avg_irr_rk_20_05
+, cast((1/(1+EXP(0-(diff_avg_irr_rk_20_03 - min_diff_avg_irr_rk_20_03) / (avg_diff_avg_irr_rk_20_03 - min_diff_avg_irr_rk_20_03 ))))*2-1 as decimal(5,3)) as diff_avg_irr_rk_20_03
+, cast((1/(1+EXP(0-(diff_avg_irr_rk_10_05 - min_diff_avg_irr_rk_10_05) / (avg_diff_avg_irr_rk_10_05 - min_diff_avg_irr_rk_10_05 ))))*2-1 as decimal(5,3)) as diff_avg_irr_rk_10_05
+, cast((1/(1+EXP(0-(diff_avg_irr_rk_10_03 - min_diff_avg_irr_rk_10_03) / (avg_diff_avg_irr_rk_10_03 - min_diff_avg_irr_rk_10_03 ))))*2-1 as decimal(5,3)) as diff_avg_irr_rk_10_03
+, cast((1/(1+EXP(0-(diff_avg_irr_rk_05_03 - min_diff_avg_irr_rk_05_03) / (avg_diff_avg_irr_rk_05_03 - min_diff_avg_irr_rk_05_03 ))))*2-1 as decimal(5,3)) as diff_avg_irr_rk_05_03
+, cast((1/(1+EXP(0-(diff_mdn_irv_rk_20_10 - min_diff_mdn_irv_rk_20_10) / (avg_diff_mdn_irv_rk_20_10 - min_diff_mdn_irv_rk_20_10 ))))*2-1 as decimal(5,3)) as diff_mdn_irv_rk_20_10
+, cast((1/(1+EXP(0-(diff_mdn_irv_rk_20_05 - min_diff_mdn_irv_rk_20_05) / (avg_diff_mdn_irv_rk_20_05 - min_diff_mdn_irv_rk_20_05 ))))*2-1 as decimal(5,3)) as diff_mdn_irv_rk_20_05
+, cast((1/(1+EXP(0-(diff_mdn_irv_rk_20_03 - min_diff_mdn_irv_rk_20_03) / (avg_diff_mdn_irv_rk_20_03 - min_diff_mdn_irv_rk_20_03 ))))*2-1 as decimal(5,3)) as diff_mdn_irv_rk_20_03
+, cast((1/(1+EXP(0-(diff_mdn_irv_rk_10_05 - min_diff_mdn_irv_rk_10_05) / (avg_diff_mdn_irv_rk_10_05 - min_diff_mdn_irv_rk_10_05 ))))*2-1 as decimal(5,3)) as diff_mdn_irv_rk_10_05
+, cast((1/(1+EXP(0-(diff_mdn_irv_rk_10_03 - min_diff_mdn_irv_rk_10_03) / (avg_diff_mdn_irv_rk_10_03 - min_diff_mdn_irv_rk_10_03 ))))*2-1 as decimal(5,3)) as diff_mdn_irv_rk_10_03
+, cast((1/(1+EXP(0-(diff_mdn_irv_rk_05_03 - min_diff_mdn_irv_rk_05_03) / (avg_diff_mdn_irv_rk_05_03 - min_diff_mdn_irv_rk_05_03 ))))*2-1 as decimal(5,3)) as diff_mdn_irv_rk_05_03
+, cast((1/(1+EXP(0-(diff_mdn_irr_rk_20_10 - min_diff_mdn_irr_rk_20_10) / (avg_diff_mdn_irr_rk_20_10 - min_diff_mdn_irr_rk_20_10 ))))*2-1 as decimal(5,3)) as diff_mdn_irr_rk_20_10
+, cast((1/(1+EXP(0-(diff_mdn_irr_rk_20_05 - min_diff_mdn_irr_rk_20_05) / (avg_diff_mdn_irr_rk_20_05 - min_diff_mdn_irr_rk_20_05 ))))*2-1 as decimal(5,3)) as diff_mdn_irr_rk_20_05
+, cast((1/(1+EXP(0-(diff_mdn_irr_rk_20_03 - min_diff_mdn_irr_rk_20_03) / (avg_diff_mdn_irr_rk_20_03 - min_diff_mdn_irr_rk_20_03 ))))*2-1 as decimal(5,3)) as diff_mdn_irr_rk_20_03
+, cast((1/(1+EXP(0-(diff_mdn_irr_rk_10_05 - min_diff_mdn_irr_rk_10_05) / (avg_diff_mdn_irr_rk_10_05 - min_diff_mdn_irr_rk_10_05 ))))*2-1 as decimal(5,3)) as diff_mdn_irr_rk_10_05
+, cast((1/(1+EXP(0-(diff_mdn_irr_rk_10_03 - min_diff_mdn_irr_rk_10_03) / (avg_diff_mdn_irr_rk_10_03 - min_diff_mdn_irr_rk_10_03 ))))*2-1 as decimal(5,3)) as diff_mdn_irr_rk_10_03
+, cast((1/(1+EXP(0-(diff_mdn_irr_rk_05_03 - min_diff_mdn_irr_rk_05_03) / (avg_diff_mdn_irr_rk_05_03 - min_diff_mdn_irr_rk_05_03 ))))*2-1 as decimal(5,3)) as diff_mdn_irr_rk_05_03
+
+, case when avg_irv_vl_10=0 then 1 else cast((1/(1+EXP(0-avg_irv_vl_20 / avg_irv_vl_10)))*2-1 as decimal(5,3)) end as devided_avg_irv_vl_20_10
+, case when avg_irv_vl_05=0 then 1 else cast((1/(1+EXP(0-avg_irv_vl_20 / avg_irv_vl_05)))*2-1 as decimal(5,3)) end as devided_avg_irv_vl_20_05
+, case when avg_irv_vl_03=0 then 1 else cast((1/(1+EXP(0-avg_irv_vl_20 / avg_irv_vl_03)))*2-1 as decimal(5,3)) end as devided_avg_irv_vl_20_03
+, case when avg_irv_vl_05=0 then 1 else cast((1/(1+EXP(0-avg_irv_vl_10 / avg_irv_vl_05)))*2-1 as decimal(5,3)) end as devided_avg_irv_vl_10_05
+, case when avg_irv_vl_03=0 then 1 else cast((1/(1+EXP(0-avg_irv_vl_10 / avg_irv_vl_03)))*2-1 as decimal(5,3)) end as devided_avg_irv_vl_10_03
+, case when avg_irv_vl_03=0 then 1 else cast((1/(1+EXP(0-avg_irv_vl_05 / avg_irv_vl_03)))*2-1 as decimal(5,3)) end as devided_avg_irv_vl_05_03
+, case when avg_irr_vl_10=0 then 1 else cast((1/(1+EXP(0-avg_irr_vl_20 / avg_irr_vl_10)))*2-1 as decimal(5,3)) end as devided_avg_irr_vl_20_10
+, case when avg_irr_vl_05=0 then 1 else cast((1/(1+EXP(0-avg_irr_vl_20 / avg_irr_vl_05)))*2-1 as decimal(5,3)) end as devided_avg_irr_vl_20_05
+, case when avg_irr_vl_03=0 then 1 else cast((1/(1+EXP(0-avg_irr_vl_20 / avg_irr_vl_03)))*2-1 as decimal(5,3)) end as devided_avg_irr_vl_20_03
+, case when avg_irr_vl_05=0 then 1 else cast((1/(1+EXP(0-avg_irr_vl_10 / avg_irr_vl_05)))*2-1 as decimal(5,3)) end as devided_avg_irr_vl_10_05
+, case when avg_irr_vl_03=0 then 1 else cast((1/(1+EXP(0-avg_irr_vl_10 / avg_irr_vl_03)))*2-1 as decimal(5,3)) end as devided_avg_irr_vl_10_03
+, case when avg_irr_vl_03=0 then 1 else cast((1/(1+EXP(0-avg_irr_vl_05 / avg_irr_vl_03)))*2-1 as decimal(5,3)) end as devided_avg_irr_vl_05_03
+, case when mdn_irv_vl_10=0 then 1 else cast((1/(1+EXP(0-mdn_irv_vl_20 / mdn_irv_vl_10)))*2-1 as decimal(5,3)) end as devided_mdn_irv_vl_20_10
+, case when mdn_irv_vl_05=0 then 1 else cast((1/(1+EXP(0-mdn_irv_vl_20 / mdn_irv_vl_05)))*2-1 as decimal(5,3)) end as devided_mdn_irv_vl_20_05
+, case when mdn_irv_vl_03=0 then 1 else cast((1/(1+EXP(0-mdn_irv_vl_20 / mdn_irv_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_irv_vl_20_03
+, case when mdn_irv_vl_05=0 then 1 else cast((1/(1+EXP(0-mdn_irv_vl_10 / mdn_irv_vl_05)))*2-1 as decimal(5,3)) end as devided_mdn_irv_vl_10_05
+, case when mdn_irv_vl_03=0 then 1 else cast((1/(1+EXP(0-mdn_irv_vl_10 / mdn_irv_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_irv_vl_10_03
+, case when mdn_irv_vl_03=0 then 1 else cast((1/(1+EXP(0-mdn_irv_vl_05 / mdn_irv_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_irv_vl_05_03
+, case when mdn_irr_vl_10=0 then 1 else cast((1/(1+EXP(0-mdn_irr_vl_20 / mdn_irr_vl_10)))*2-1 as decimal(5,3)) end as devided_mdn_irr_vl_20_10
+, case when mdn_irr_vl_05=0 then 1 else cast((1/(1+EXP(0-mdn_irr_vl_20 / mdn_irr_vl_05)))*2-1 as decimal(5,3)) end as devided_mdn_irr_vl_20_05
+, case when mdn_irr_vl_03=0 then 1 else cast((1/(1+EXP(0-mdn_irr_vl_20 / mdn_irr_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_irr_vl_20_03
+, case when mdn_irr_vl_05=0 then 1 else cast((1/(1+EXP(0-mdn_irr_vl_10 / mdn_irr_vl_05)))*2-1 as decimal(5,3)) end as devided_mdn_irr_vl_10_05
+, case when mdn_irr_vl_03=0 then 1 else cast((1/(1+EXP(0-mdn_irr_vl_10 / mdn_irr_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_irr_vl_10_03
+, case when mdn_irr_vl_03=0 then 1 else cast((1/(1+EXP(0-mdn_irr_vl_05 / mdn_irr_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_irr_vl_05_03
+
+from feature_ir_scale_temp t cross join feature_ir_scale_diff_para;
+
 END
 
 $$;
 
 alter function feature_ir() owner to postgres;
+
