@@ -934,78 +934,78 @@ select i.date_index, i.record_date
 ,   cast((1/(1+EXP(0-vat_03_s)))*2-1 as decimal(5,3)) as vat_03_s
 ,   cast((1/(1+EXP(0-vov_03_s)))*2-1 as decimal(5,3)) as vov_03_s
 ,   cast((1/(1+EXP(0-vss_03_s)))*2-1 as decimal(5,3)) as vss_03_s
-,   cast((1/(1+EXP(0- fts_20_s+ fts_10_s)))*2-1 as decimal(5,3)) as minus_fts_20_10_s
-,   cast((1/(1+EXP(0- fts_20_s+ fts_05_s)))*2-1 as decimal(5,3)) as minus_fts_20_05_s
-,   cast((1/(1+EXP(0- fts_20_s+ fts_03_s)))*2-1 as decimal(5,3)) as minus_fts_20_03_s
-,   cast((1/(1+EXP(0- fts_10_s+ fts_05_s)))*2-1 as decimal(5,3)) as minus_fts_10_05_s
-,   cast((1/(1+EXP(0- fts_10_s+ fts_03_s)))*2-1 as decimal(5,3)) as minus_fts_10_03_s
-,   cast((1/(1+EXP(0- fts_05_s+ fts_03_s)))*2-1 as decimal(5,3)) as minus_fts_05_03_s
-,   cast((1/(1+EXP(0- fat_20_s+ fat_10_s)))*2-1 as decimal(5,3)) as minus_fat_20_10_s
-,   cast((1/(1+EXP(0- fat_20_s+ fat_05_s)))*2-1 as decimal(5,3)) as minus_fat_20_05_s
-,   cast((1/(1+EXP(0- fat_20_s+ fat_03_s)))*2-1 as decimal(5,3)) as minus_fat_20_03_s
-,   cast((1/(1+EXP(0- fat_10_s+ fat_05_s)))*2-1 as decimal(5,3)) as minus_fat_10_05_s
-,   cast((1/(1+EXP(0- fat_10_s+ fat_03_s)))*2-1 as decimal(5,3)) as minus_fat_10_03_s
-,   cast((1/(1+EXP(0- fat_05_s+ fat_03_s)))*2-1 as decimal(5,3)) as minus_fat_05_03_s
-,   cast((1/(1+EXP(0- fov_20_s+ fov_10_s)))*2-1 as decimal(5,3)) as minus_fov_20_10_s
-,   cast((1/(1+EXP(0- fov_20_s+ fov_05_s)))*2-1 as decimal(5,3)) as minus_fov_20_05_s
-,   cast((1/(1+EXP(0- fov_20_s+ fov_03_s)))*2-1 as decimal(5,3)) as minus_fov_20_03_s
-,   cast((1/(1+EXP(0- fov_10_s+ fov_05_s)))*2-1 as decimal(5,3)) as minus_fov_10_05_s
-,   cast((1/(1+EXP(0- fov_10_s+ fov_03_s)))*2-1 as decimal(5,3)) as minus_fov_10_03_s
-,   cast((1/(1+EXP(0- fov_05_s+ fov_03_s)))*2-1 as decimal(5,3)) as minus_fov_05_03_s
-,   cast((1/(1+EXP(0- fss_20_s+ fss_10_s)))*2-1 as decimal(5,3)) as minus_fss_20_10_s
-,   cast((1/(1+EXP(0- fss_20_s+ fss_05_s)))*2-1 as decimal(5,3)) as minus_fss_20_05_s
-,   cast((1/(1+EXP(0- fss_20_s+ fss_03_s)))*2-1 as decimal(5,3)) as minus_fss_20_03_s
-,   cast((1/(1+EXP(0- fss_10_s+ fss_05_s)))*2-1 as decimal(5,3)) as minus_fss_10_05_s
-,   cast((1/(1+EXP(0- fss_10_s+ fss_03_s)))*2-1 as decimal(5,3)) as minus_fss_10_03_s
-,   cast((1/(1+EXP(0- fss_05_s+ fss_03_s)))*2-1 as decimal(5,3)) as minus_fss_05_03_s
-,   cast((1/(1+EXP(0- pts_20_s+ pts_10_s)))*2-1 as decimal(5,3)) as minus_pts_20_10_s
-,   cast((1/(1+EXP(0- pts_20_s+ pts_05_s)))*2-1 as decimal(5,3)) as minus_pts_20_05_s
-,   cast((1/(1+EXP(0- pts_20_s+ pts_03_s)))*2-1 as decimal(5,3)) as minus_pts_20_03_s
-,   cast((1/(1+EXP(0- pts_10_s+ pts_05_s)))*2-1 as decimal(5,3)) as minus_pts_10_05_s
-,   cast((1/(1+EXP(0- pts_10_s+ pts_03_s)))*2-1 as decimal(5,3)) as minus_pts_10_03_s
-,   cast((1/(1+EXP(0- pts_05_s+ pts_03_s)))*2-1 as decimal(5,3)) as minus_pts_05_03_s
-,   cast((1/(1+EXP(0- pat_20_s+ pat_10_s)))*2-1 as decimal(5,3)) as minus_pat_20_10_s
-,   cast((1/(1+EXP(0- pat_20_s+ pat_05_s)))*2-1 as decimal(5,3)) as minus_pat_20_05_s
-,   cast((1/(1+EXP(0- pat_20_s+ pat_03_s)))*2-1 as decimal(5,3)) as minus_pat_20_03_s
-,   cast((1/(1+EXP(0- pat_10_s+ pat_05_s)))*2-1 as decimal(5,3)) as minus_pat_10_05_s
-,   cast((1/(1+EXP(0- pat_10_s+ pat_03_s)))*2-1 as decimal(5,3)) as minus_pat_10_03_s
-,   cast((1/(1+EXP(0- pat_05_s+ pat_03_s)))*2-1 as decimal(5,3)) as minus_pat_05_03_s
-,   cast((1/(1+EXP(0- pov_20_s+ pov_10_s)))*2-1 as decimal(5,3)) as minus_pov_20_10_s
-,   cast((1/(1+EXP(0- pov_20_s+ pov_05_s)))*2-1 as decimal(5,3)) as minus_pov_20_05_s
-,   cast((1/(1+EXP(0- pov_20_s+ pov_03_s)))*2-1 as decimal(5,3)) as minus_pov_20_03_s
-,   cast((1/(1+EXP(0- pov_10_s+ pov_05_s)))*2-1 as decimal(5,3)) as minus_pov_10_05_s
-,   cast((1/(1+EXP(0- pov_10_s+ pov_03_s)))*2-1 as decimal(5,3)) as minus_pov_10_03_s
-,   cast((1/(1+EXP(0- pov_05_s+ pov_03_s)))*2-1 as decimal(5,3)) as minus_pov_05_03_s
-,   cast((1/(1+EXP(0- pss_20_s+ pss_10_s)))*2-1 as decimal(5,3)) as minus_pss_20_10_s
-,   cast((1/(1+EXP(0- pss_20_s+ pss_05_s)))*2-1 as decimal(5,3)) as minus_pss_20_05_s
-,   cast((1/(1+EXP(0- pss_20_s+ pss_03_s)))*2-1 as decimal(5,3)) as minus_pss_20_03_s
-,   cast((1/(1+EXP(0- pss_10_s+ pss_05_s)))*2-1 as decimal(5,3)) as minus_pss_10_05_s
-,   cast((1/(1+EXP(0- pss_10_s+ pss_03_s)))*2-1 as decimal(5,3)) as minus_pss_10_03_s
-,   cast((1/(1+EXP(0- pss_05_s+ pss_03_s)))*2-1 as decimal(5,3)) as minus_pss_05_03_s
-,   cast((1/(1+EXP(0- vts_20_s+ vts_10_s)))*2-1 as decimal(5,3)) as minus_vts_20_10_s
-,   cast((1/(1+EXP(0- vts_20_s+ vts_05_s)))*2-1 as decimal(5,3)) as minus_vts_20_05_s
-,   cast((1/(1+EXP(0- vts_20_s+ vts_03_s)))*2-1 as decimal(5,3)) as minus_vts_20_03_s
-,   cast((1/(1+EXP(0- vts_10_s+ vts_05_s)))*2-1 as decimal(5,3)) as minus_vts_10_05_s
-,   cast((1/(1+EXP(0- vts_10_s+ vts_03_s)))*2-1 as decimal(5,3)) as minus_vts_10_03_s
-,   cast((1/(1+EXP(0- vts_05_s+ vts_03_s)))*2-1 as decimal(5,3)) as minus_vts_05_03_s
-,   cast((1/(1+EXP(0- vat_20_s+ vat_10_s)))*2-1 as decimal(5,3)) as minus_vat_20_10_s
-,   cast((1/(1+EXP(0- vat_20_s+ vat_05_s)))*2-1 as decimal(5,3)) as minus_vat_20_05_s
-,   cast((1/(1+EXP(0- vat_20_s+ vat_03_s)))*2-1 as decimal(5,3)) as minus_vat_20_03_s
-,   cast((1/(1+EXP(0- vat_10_s+ vat_05_s)))*2-1 as decimal(5,3)) as minus_vat_10_05_s
-,   cast((1/(1+EXP(0- vat_10_s+ vat_03_s)))*2-1 as decimal(5,3)) as minus_vat_10_03_s
-,   cast((1/(1+EXP(0- vat_05_s+ vat_03_s)))*2-1 as decimal(5,3)) as minus_vat_05_03_s
-,   cast((1/(1+EXP(0- vov_20_s+ vov_10_s)))*2-1 as decimal(5,3)) as minus_vov_20_10_s
-,   cast((1/(1+EXP(0- vov_20_s+ vov_05_s)))*2-1 as decimal(5,3)) as minus_vov_20_05_s
-,   cast((1/(1+EXP(0- vov_20_s+ vov_03_s)))*2-1 as decimal(5,3)) as minus_vov_20_03_s
-,   cast((1/(1+EXP(0- vov_10_s+ vov_05_s)))*2-1 as decimal(5,3)) as minus_vov_10_05_s
-,   cast((1/(1+EXP(0- vov_10_s+ vov_03_s)))*2-1 as decimal(5,3)) as minus_vov_10_03_s
-,   cast((1/(1+EXP(0- vov_05_s+ vov_03_s)))*2-1 as decimal(5,3)) as minus_vov_05_03_s
-,   cast((1/(1+EXP(0- vss_20_s+ vss_10_s)))*2-1 as decimal(5,3)) as minus_vss_20_10_s
-,   cast((1/(1+EXP(0- vss_20_s+ vss_05_s)))*2-1 as decimal(5,3)) as minus_vss_20_05_s
-,   cast((1/(1+EXP(0- vss_20_s+ vss_03_s)))*2-1 as decimal(5,3)) as minus_vss_20_03_s
-,   cast((1/(1+EXP(0- vss_10_s+ vss_05_s)))*2-1 as decimal(5,3)) as minus_vss_10_05_s
-,   cast((1/(1+EXP(0- vss_10_s+ vss_03_s)))*2-1 as decimal(5,3)) as minus_vss_10_03_s
-,   cast((1/(1+EXP(0- vss_05_s+ vss_03_s)))*2-1 as decimal(5,3)) as minus_vss_05_03_s
+,   case when fts_10_s = 0 then 1 else cast((1/(1+EXP(0- fts_20_s / fts_10_s)))*2-1 as decimal(5,3)) end as devided_fts_20_10_s
+,   case when fts_05_s = 0 then 1 else cast((1/(1+EXP(0- fts_20_s / fts_05_s)))*2-1 as decimal(5,3)) end as devided_fts_20_05_s
+,   case when fts_03_s = 0 then 1 else cast((1/(1+EXP(0- fts_20_s / fts_03_s)))*2-1 as decimal(5,3)) end as devided_fts_20_03_s
+,   case when fts_05_s = 0 then 1 else cast((1/(1+EXP(0- fts_10_s / fts_05_s)))*2-1 as decimal(5,3)) end as devided_fts_10_05_s
+,   case when fts_03_s = 0 then 1 else cast((1/(1+EXP(0- fts_10_s / fts_03_s)))*2-1 as decimal(5,3)) end as devided_fts_10_03_s
+,   case when fts_03_s = 0 then 1 else cast((1/(1+EXP(0- fts_05_s / fts_03_s)))*2-1 as decimal(5,3)) end as devided_fts_05_03_s
+,   case when fat_10_s = 0 then 1 else cast((1/(1+EXP(0- fat_20_s / fat_10_s)))*2-1 as decimal(5,3)) end as devided_fat_20_10_s
+,   case when fat_05_s = 0 then 1 else cast((1/(1+EXP(0- fat_20_s / fat_05_s)))*2-1 as decimal(5,3)) end as devided_fat_20_05_s
+,   case when fat_03_s = 0 then 1 else cast((1/(1+EXP(0- fat_20_s / fat_03_s)))*2-1 as decimal(5,3)) end as devided_fat_20_03_s
+,   case when fat_05_s = 0 then 1 else cast((1/(1+EXP(0- fat_10_s / fat_05_s)))*2-1 as decimal(5,3)) end as devided_fat_10_05_s
+,   case when fat_03_s = 0 then 1 else cast((1/(1+EXP(0- fat_10_s / fat_03_s)))*2-1 as decimal(5,3)) end as devided_fat_10_03_s
+,   case when fat_03_s = 0 then 1 else cast((1/(1+EXP(0- fat_05_s / fat_03_s)))*2-1 as decimal(5,3)) end as devided_fat_05_03_s
+,   case when fov_10_s = 0 then 1 else cast((1/(1+EXP(0- fov_20_s / fov_10_s)))*2-1 as decimal(5,3)) end as devided_fov_20_10_s
+,   case when fov_05_s = 0 then 1 else cast((1/(1+EXP(0- fov_20_s / fov_05_s)))*2-1 as decimal(5,3)) end as devided_fov_20_05_s
+,   case when fov_03_s = 0 then 1 else cast((1/(1+EXP(0- fov_20_s / fov_03_s)))*2-1 as decimal(5,3)) end as devided_fov_20_03_s
+,   case when fov_05_s = 0 then 1 else cast((1/(1+EXP(0- fov_10_s / fov_05_s)))*2-1 as decimal(5,3)) end as devided_fov_10_05_s
+,   case when fov_03_s = 0 then 1 else cast((1/(1+EXP(0- fov_10_s / fov_03_s)))*2-1 as decimal(5,3)) end as devided_fov_10_03_s
+,   case when fov_03_s = 0 then 1 else cast((1/(1+EXP(0- fov_05_s / fov_03_s)))*2-1 as decimal(5,3)) end as devided_fov_05_03_s
+,   case when fss_10_s = 0 then 1 else cast((1/(1+EXP(0- fss_20_s / fss_10_s)))*2-1 as decimal(5,3)) end as devided_fss_20_10_s
+,   case when fss_05_s = 0 then 1 else cast((1/(1+EXP(0- fss_20_s / fss_05_s)))*2-1 as decimal(5,3)) end as devided_fss_20_05_s
+,   case when fss_03_s = 0 then 1 else cast((1/(1+EXP(0- fss_20_s / fss_03_s)))*2-1 as decimal(5,3)) end as devided_fss_20_03_s
+,   case when fss_05_s = 0 then 1 else cast((1/(1+EXP(0- fss_10_s / fss_05_s)))*2-1 as decimal(5,3)) end as devided_fss_10_05_s
+,   case when fss_03_s = 0 then 1 else cast((1/(1+EXP(0- fss_10_s / fss_03_s)))*2-1 as decimal(5,3)) end as devided_fss_10_03_s
+,   case when fss_03_s = 0 then 1 else cast((1/(1+EXP(0- fss_05_s / fss_03_s)))*2-1 as decimal(5,3)) end as devided_fss_05_03_s
+,   case when pts_10_s = 0 then 1 else cast((1/(1+EXP(0- pts_20_s / pts_10_s)))*2-1 as decimal(5,3)) end as devided_pts_20_10_s
+,   case when pts_05_s = 0 then 1 else cast((1/(1+EXP(0- pts_20_s / pts_05_s)))*2-1 as decimal(5,3)) end as devided_pts_20_05_s
+,   case when pts_03_s = 0 then 1 else cast((1/(1+EXP(0- pts_20_s / pts_03_s)))*2-1 as decimal(5,3)) end as devided_pts_20_03_s
+,   case when pts_05_s = 0 then 1 else cast((1/(1+EXP(0- pts_10_s / pts_05_s)))*2-1 as decimal(5,3)) end as devided_pts_10_05_s
+,   case when pts_03_s = 0 then 1 else cast((1/(1+EXP(0- pts_10_s / pts_03_s)))*2-1 as decimal(5,3)) end as devided_pts_10_03_s
+,   case when pts_03_s = 0 then 1 else cast((1/(1+EXP(0- pts_05_s / pts_03_s)))*2-1 as decimal(5,3)) end as devided_pts_05_03_s
+,   case when pat_10_s = 0 then 1 else cast((1/(1+EXP(0- pat_20_s / pat_10_s)))*2-1 as decimal(5,3)) end as devided_pat_20_10_s
+,   case when pat_05_s = 0 then 1 else cast((1/(1+EXP(0- pat_20_s / pat_05_s)))*2-1 as decimal(5,3)) end as devided_pat_20_05_s
+,   case when pat_03_s = 0 then 1 else cast((1/(1+EXP(0- pat_20_s / pat_03_s)))*2-1 as decimal(5,3)) end as devided_pat_20_03_s
+,   case when pat_05_s = 0 then 1 else cast((1/(1+EXP(0- pat_10_s / pat_05_s)))*2-1 as decimal(5,3)) end as devided_pat_10_05_s
+,   case when pat_03_s = 0 then 1 else cast((1/(1+EXP(0- pat_10_s / pat_03_s)))*2-1 as decimal(5,3)) end as devided_pat_10_03_s
+,   case when pat_03_s = 0 then 1 else cast((1/(1+EXP(0- pat_05_s / pat_03_s)))*2-1 as decimal(5,3)) end as devided_pat_05_03_s
+,   case when pov_10_s = 0 then 1 else cast((1/(1+EXP(0- pov_20_s / pov_10_s)))*2-1 as decimal(5,3)) end as devided_pov_20_10_s
+,   case when pov_05_s = 0 then 1 else cast((1/(1+EXP(0- pov_20_s / pov_05_s)))*2-1 as decimal(5,3)) end as devided_pov_20_05_s
+,   case when pov_03_s = 0 then 1 else cast((1/(1+EXP(0- pov_20_s / pov_03_s)))*2-1 as decimal(5,3)) end as devided_pov_20_03_s
+,   case when pov_05_s = 0 then 1 else cast((1/(1+EXP(0- pov_10_s / pov_05_s)))*2-1 as decimal(5,3)) end as devided_pov_10_05_s
+,   case when pov_03_s = 0 then 1 else cast((1/(1+EXP(0- pov_10_s / pov_03_s)))*2-1 as decimal(5,3)) end as devided_pov_10_03_s
+,   case when pov_03_s = 0 then 1 else cast((1/(1+EXP(0- pov_05_s / pov_03_s)))*2-1 as decimal(5,3)) end as devided_pov_05_03_s
+,   case when pss_10_s = 0 then 1 else cast((1/(1+EXP(0- pss_20_s / pss_10_s)))*2-1 as decimal(5,3)) end as devided_pss_20_10_s
+,   case when pss_05_s = 0 then 1 else cast((1/(1+EXP(0- pss_20_s / pss_05_s)))*2-1 as decimal(5,3)) end as devided_pss_20_05_s
+,   case when pss_03_s = 0 then 1 else cast((1/(1+EXP(0- pss_20_s / pss_03_s)))*2-1 as decimal(5,3)) end as devided_pss_20_03_s
+,   case when pss_05_s = 0 then 1 else cast((1/(1+EXP(0- pss_10_s / pss_05_s)))*2-1 as decimal(5,3)) end as devided_pss_10_05_s
+,   case when pss_03_s = 0 then 1 else cast((1/(1+EXP(0- pss_10_s / pss_03_s)))*2-1 as decimal(5,3)) end as devided_pss_10_03_s
+,   case when pss_03_s = 0 then 1 else cast((1/(1+EXP(0- pss_05_s / pss_03_s)))*2-1 as decimal(5,3)) end as devided_pss_05_03_s
+,   case when vts_10_s = 0 then 1 else cast((1/(1+EXP(0- vts_20_s / vts_10_s)))*2-1 as decimal(5,3)) end as devided_vts_20_10_s
+,   case when vts_05_s = 0 then 1 else cast((1/(1+EXP(0- vts_20_s / vts_05_s)))*2-1 as decimal(5,3)) end as devided_vts_20_05_s
+,   case when vts_03_s = 0 then 1 else cast((1/(1+EXP(0- vts_20_s / vts_03_s)))*2-1 as decimal(5,3)) end as devided_vts_20_03_s
+,   case when vts_05_s = 0 then 1 else cast((1/(1+EXP(0- vts_10_s / vts_05_s)))*2-1 as decimal(5,3)) end as devided_vts_10_05_s
+,   case when vts_03_s = 0 then 1 else cast((1/(1+EXP(0- vts_10_s / vts_03_s)))*2-1 as decimal(5,3)) end as devided_vts_10_03_s
+,   case when vts_03_s = 0 then 1 else cast((1/(1+EXP(0- vts_05_s / vts_03_s)))*2-1 as decimal(5,3)) end as devided_vts_05_03_s
+,   case when vat_10_s = 0 then 1 else cast((1/(1+EXP(0- vat_20_s / vat_10_s)))*2-1 as decimal(5,3)) end as devided_vat_20_10_s
+,   case when vat_05_s = 0 then 1 else cast((1/(1+EXP(0- vat_20_s / vat_05_s)))*2-1 as decimal(5,3)) end as devided_vat_20_05_s
+,   case when vat_03_s = 0 then 1 else cast((1/(1+EXP(0- vat_20_s / vat_03_s)))*2-1 as decimal(5,3)) end as devided_vat_20_03_s
+,   case when vat_05_s = 0 then 1 else cast((1/(1+EXP(0- vat_10_s / vat_05_s)))*2-1 as decimal(5,3)) end as devided_vat_10_05_s
+,   case when vat_03_s = 0 then 1 else cast((1/(1+EXP(0- vat_10_s / vat_03_s)))*2-1 as decimal(5,3)) end as devided_vat_10_03_s
+,   case when vat_03_s = 0 then 1 else cast((1/(1+EXP(0- vat_05_s / vat_03_s)))*2-1 as decimal(5,3)) end as devided_vat_05_03_s
+,   case when vov_10_s = 0 then 1 else cast((1/(1+EXP(0- vov_20_s / vov_10_s)))*2-1 as decimal(5,3)) end as devided_vov_20_10_s
+,   case when vov_05_s = 0 then 1 else cast((1/(1+EXP(0- vov_20_s / vov_05_s)))*2-1 as decimal(5,3)) end as devided_vov_20_05_s
+,   case when vov_03_s = 0 then 1 else cast((1/(1+EXP(0- vov_20_s / vov_03_s)))*2-1 as decimal(5,3)) end as devided_vov_20_03_s
+,   case when vov_05_s = 0 then 1 else cast((1/(1+EXP(0- vov_10_s / vov_05_s)))*2-1 as decimal(5,3)) end as devided_vov_10_05_s
+,   case when vov_03_s = 0 then 1 else cast((1/(1+EXP(0- vov_10_s / vov_03_s)))*2-1 as decimal(5,3)) end as devided_vov_10_03_s
+,   case when vov_03_s = 0 then 1 else cast((1/(1+EXP(0- vov_05_s / vov_03_s)))*2-1 as decimal(5,3)) end as devided_vov_05_03_s
+,   case when vss_10_s = 0 then 1 else cast((1/(1+EXP(0- vss_20_s / vss_10_s)))*2-1 as decimal(5,3)) end as devided_vss_20_10_s
+,   case when vss_05_s = 0 then 1 else cast((1/(1+EXP(0- vss_20_s / vss_05_s)))*2-1 as decimal(5,3)) end as devided_vss_20_05_s
+,   case when vss_03_s = 0 then 1 else cast((1/(1+EXP(0- vss_20_s / vss_03_s)))*2-1 as decimal(5,3)) end as devided_vss_20_03_s
+,   case when vss_05_s = 0 then 1 else cast((1/(1+EXP(0- vss_10_s / vss_05_s)))*2-1 as decimal(5,3)) end as devided_vss_10_05_s
+,   case when vss_03_s = 0 then 1 else cast((1/(1+EXP(0- vss_10_s / vss_03_s)))*2-1 as decimal(5,3)) end as devided_vss_10_03_s
+,   case when vss_03_s = 0 then 1 else cast((1/(1+EXP(0- vss_05_s / vss_03_s)))*2-1 as decimal(5,3)) end as devided_vss_05_03_s
 from temp_global_staging i
 inner join temp_global_median_03 m03 on i.date_index = m03.date_index
 inner join temp_global_median_05 m05 on i.date_index = m05.date_index
