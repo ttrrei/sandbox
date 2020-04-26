@@ -79,6 +79,7 @@ select code, date_index, forward_pe as pe00
 , lag(forward_pe, 19) over (partition by code order by date_index) as pe19
 from pe_rank ) t ) t ) t where row_number = 10;
 
+
 drop table if exists feature_pe;
 create temp table feature_pe as
 select t.code, t.record_date, t.date_index
@@ -97,6 +98,69 @@ left join pe_median10 m10
 left join pe_median20 m20
     on t.code = m20.code and t.date_index = m20.date_index;
 
+drop table if exists feature_pe_para;
+create temp table feature_pe_para as select 1
+, min(mdn_pe_vl_03) as min_mdn_pe_vl_03 , avg(mdn_pe_vl_03) as avg__mdn_pe_vl_03
+, min(mdn_pe_vl_05) as min_mdn_pe_vl_05 , avg(mdn_pe_vl_05) as avg__mdn_pe_vl_05
+, min(mdn_pe_vl_10) as min_mdn_pe_vl_10 , avg(mdn_pe_vl_10) as avg__mdn_pe_vl_10
+, min(mdn_pe_vl_20) as min_mdn_pe_vl_20 , avg(mdn_pe_vl_20) as avg__mdn_pe_vl_20
+, min(mdn_pe_rk_03) as min_mdn_pe_rk_03 , avg(mdn_pe_rk_03) as avg__mdn_pe_rk_03
+, min(mdn_pe_rk_05) as min_mdn_pe_rk_05 , avg(mdn_pe_rk_05) as avg__mdn_pe_rk_05
+, min(mdn_pe_rk_10) as min_mdn_pe_rk_10 , avg(mdn_pe_rk_10) as avg__mdn_pe_rk_10
+, min(mdn_pe_rk_20) as min_mdn_pe_rk_20 , avg(mdn_pe_rk_20) as avg__mdn_pe_rk_20
+from feature_pe;
+
+drop table if exists feature_pe_temp;
+create temp table feature_pe_temp as select code, record_date, date_index
+, (mdn_pe_vl_03 - min_mdn_pe_vl_03 ) / (avg__mdn_pe_vl_03 - min_mdn_pe_vl_03 ) as mdn_pe_vl_03
+, (mdn_pe_vl_05 - min_mdn_pe_vl_05 ) / (avg__mdn_pe_vl_05 - min_mdn_pe_vl_05 ) as mdn_pe_vl_05
+, (mdn_pe_vl_10 - min_mdn_pe_vl_10 ) / (avg__mdn_pe_vl_10 - min_mdn_pe_vl_10 ) as mdn_pe_vl_10
+, (mdn_pe_vl_20 - min_mdn_pe_vl_20 ) / (avg__mdn_pe_vl_20 - min_mdn_pe_vl_20 ) as mdn_pe_vl_20
+, (mdn_pe_rk_03 - min_mdn_pe_rk_03 ) / (avg__mdn_pe_rk_03 - min_mdn_pe_rk_03 ) as mdn_pe_rk_03
+, (mdn_pe_rk_05 - min_mdn_pe_rk_05 ) / (avg__mdn_pe_rk_05 - min_mdn_pe_rk_05 ) as mdn_pe_rk_05
+, (mdn_pe_rk_10 - min_mdn_pe_rk_10 ) / (avg__mdn_pe_rk_10 - min_mdn_pe_rk_10 ) as mdn_pe_rk_10
+, (mdn_pe_rk_20 - min_mdn_pe_rk_20 ) / (avg__mdn_pe_rk_20 - min_mdn_pe_rk_20 ) as mdn_pe_rk_20
+, mdn_pe_rk_20 - mdn_pe_rk_10 as diff_pe_rk_20_10
+, mdn_pe_rk_20 - mdn_pe_rk_05 as diff_pe_rk_20_05
+, mdn_pe_rk_20 - mdn_pe_rk_03 as diff_pe_rk_20_03
+, mdn_pe_rk_10 - mdn_pe_rk_05 as diff_pe_rk_10_05
+, mdn_pe_rk_10 - mdn_pe_rk_03 as diff_pe_rk_10_03
+, mdn_pe_rk_05 - mdn_pe_rk_03 as diff_pe_rk_05_03
+from feature_pe cross join feature_pe_para;
+
+drop table if exists feature_pe_temp_para;
+create temp table feature_pe_temp_para as select 1
+, min(diff_pe_rk_20_10) as min_diff_pe_rk_20_10 , avg(diff_pe_rk_20_10) as avg_diff_pe_rk_20_10
+, min(diff_pe_rk_20_05) as min_diff_pe_rk_20_05 , avg(diff_pe_rk_20_05) as avg_diff_pe_rk_20_05
+, min(diff_pe_rk_20_03) as min_diff_pe_rk_20_03 , avg(diff_pe_rk_20_03) as avg_diff_pe_rk_20_03
+, min(diff_pe_rk_10_05) as min_diff_pe_rk_10_05 , avg(diff_pe_rk_10_05) as avg_diff_pe_rk_10_05
+, min(diff_pe_rk_10_03) as min_diff_pe_rk_10_03 , avg(diff_pe_rk_10_03) as avg_diff_pe_rk_10_03
+, min(diff_pe_rk_05_03) as min_diff_pe_rk_05_03 , avg(diff_pe_rk_05_03) as avg_diff_pe_rk_05_03
+from feature_pe_temp;
+
+drop table if exists feature_pe_scale;
+create temp table feature_pe_scale as select code, record_date, date_index
+, cast((1/(1+EXP(0-(mdn_pe_vl_03))))*2-1 as decimal(5,3)) as mdn_pe_vl_03
+, cast((1/(1+EXP(0-(mdn_pe_vl_05))))*2-1 as decimal(5,3)) as mdn_pe_vl_05
+, cast((1/(1+EXP(0-(mdn_pe_vl_10))))*2-1 as decimal(5,3)) as mdn_pe_vl_10
+, cast((1/(1+EXP(0-(mdn_pe_vl_20))))*2-1 as decimal(5,3)) as mdn_pe_vl_20
+, cast((1/(1+EXP(0-(mdn_pe_rk_03))))*2-1 as decimal(5,3)) as mdn_pe_rk_03
+, cast((1/(1+EXP(0-(mdn_pe_rk_05))))*2-1 as decimal(5,3)) as mdn_pe_rk_05
+, cast((1/(1+EXP(0-(mdn_pe_rk_10))))*2-1 as decimal(5,3)) as mdn_pe_rk_10
+, cast((1/(1+EXP(0-(mdn_pe_rk_20))))*2-1 as decimal(5,3)) as mdn_pe_rk_20
+, case when mdn_pe_vl_10= 0 then 1 else cast((1/(1+EXP(0-mdn_pe_vl_20 / mdn_pe_vl_10)))*2-1 as decimal(5,3)) end as devided_mdn_pe_vl_20_10
+, case when mdn_pe_vl_05= 0 then 1 else cast((1/(1+EXP(0-mdn_pe_vl_20 / mdn_pe_vl_05)))*2-1 as decimal(5,3)) end as devided_mdn_pe_vl_20_05
+, case when mdn_pe_vl_03= 0 then 1 else cast((1/(1+EXP(0-mdn_pe_vl_20 / mdn_pe_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_pe_vl_20_03
+, case when mdn_pe_vl_05= 0 then 1 else cast((1/(1+EXP(0-mdn_pe_vl_10 / mdn_pe_vl_05)))*2-1 as decimal(5,3)) end as devided_mdn_pe_vl_10_05
+, case when mdn_pe_vl_03= 0 then 1 else cast((1/(1+EXP(0-mdn_pe_vl_10 / mdn_pe_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_pe_vl_10_03
+, case when mdn_pe_vl_03= 0 then 1 else cast((1/(1+EXP(0-mdn_pe_vl_05 / mdn_pe_vl_03)))*2-1 as decimal(5,3)) end as devided_mdn_pe_vl_05_03
+, case when avg_diff_pe_rk_20_10 = min_diff_pe_rk_20_10 then 1 else cast((1/(1+EXP(0-(diff_pe_rk_20_10 - min_diff_pe_rk_20_10) / (avg_diff_pe_rk_20_10 - min_diff_pe_rk_20_10))))*2-1 as decimal(5,3)) end as devided_rank20_10
+, case when avg_diff_pe_rk_20_05 = min_diff_pe_rk_20_05 then 1 else cast((1/(1+EXP(0-(diff_pe_rk_20_05 - min_diff_pe_rk_20_05) / (avg_diff_pe_rk_20_05 - min_diff_pe_rk_20_05))))*2-1 as decimal(5,3)) end as devided_rank20_05
+, case when avg_diff_pe_rk_20_03 = min_diff_pe_rk_20_03 then 1 else cast((1/(1+EXP(0-(diff_pe_rk_20_03 - min_diff_pe_rk_20_03) / (avg_diff_pe_rk_20_03 - min_diff_pe_rk_20_03))))*2-1 as decimal(5,3)) end as devided_rank20_03
+, case when avg_diff_pe_rk_10_05 = min_diff_pe_rk_10_05 then 1 else cast((1/(1+EXP(0-(diff_pe_rk_10_05 - min_diff_pe_rk_10_05) / (avg_diff_pe_rk_10_05 - min_diff_pe_rk_10_05))))*2-1 as decimal(5,3)) end as devided_rank10_05
+, case when avg_diff_pe_rk_10_03 = min_diff_pe_rk_10_03 then 1 else cast((1/(1+EXP(0-(diff_pe_rk_10_03 - min_diff_pe_rk_10_03) / (avg_diff_pe_rk_10_03 - min_diff_pe_rk_10_03))))*2-1 as decimal(5,3)) end as devided_rank10_03
+, case when avg_diff_pe_rk_05_03 = min_diff_pe_rk_05_03 then 1 else cast((1/(1+EXP(0-(diff_pe_rk_05_03 - min_diff_pe_rk_05_03) / (avg_diff_pe_rk_05_03 - min_diff_pe_rk_05_03))))*2-1 as decimal(5,3)) end as devided_rank05_03
+from feature_pe_temp cross join feature_pe_temp_para;
 END
 
 $$;
