@@ -1,0 +1,44 @@
+drop table if exists fir;
+create temp table fir  (
+	digit int
+);
+insert into fir  select 0;
+insert into fir  select 1;
+insert into fir  select 2;
+insert into fir  select 3;
+insert into fir  select 4;
+insert into fir  select 5;
+insert into fir  select 6;
+insert into fir  select 7;
+insert into fir  select 8;
+insert into fir  select 9;
+
+drop table if exists sec;
+create temp table sec  (
+	digit int
+);
+insert into sec  select digit*10 from fir;
+
+drop table if exists thi;
+create temp table thi (
+	digit int
+);
+insert into thi  select digit*10 from sec;
+
+drop table if exists list;
+create temp table list as 
+select f.digit + s.digit+ t.digit as digit from fir f
+cross join sec s 
+cross join thi t
+order by 1;
+insert into list select 1000;
+
+drop table if exists temp_matrix;
+create temp table temp_matrix as 
+select l1.digit as src, l2.digit as wgt,  l1.digit * l2.digit as rst 
+from list l1 cross join list l2 ;
+
+drop table if exists full_matrix;
+create table full_matrix as 
+select src+1000 as src , wgt, rst from matrix
+union select 1000-src as src, wgt, 0-rst as rst from matrix;
