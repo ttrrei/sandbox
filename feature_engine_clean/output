@@ -1,0 +1,42 @@
+-- FUNCTION: public.output()
+
+-- DROP FUNCTION public.output();
+
+CREATE OR REPLACE FUNCTION public.output(
+	)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+BEGIN
+
+drop table if exists temp_index;
+create temp table temp_index as 
+select i.record_date from 
+(select record_date from trainingset group by record_date) i
+inner join 
+(select record_date from final_global group by record_date) g
+on i.record_date = g.record_date;
+
+create table global_output as 
+select g.* from final_global g
+inner join temp_index i
+on g.record_date = i.record_date;
+
+create table individual_output as 
+select t.* from trainingset t
+inner join temp_index i
+on t.record_date = i.record_date;
+
+delete from individual_output where date_index = 114;
+delete from global_output where date_index = 114;
+
+
+END
+
+$BODY$;
+
+ALTER FUNCTION public.output()
+    OWNER TO postgres;
