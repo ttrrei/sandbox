@@ -1,0 +1,116 @@
+drop table if exists temp_finance_2002010_200612;
+create temporary table  temp_finance_2002010_200612 as 
+select code	,market_open	,market_previous_close	,market_day_high	,market_day_low	,market_price	,market_volume	,
+target_low_price	,target_high_price	,target_median_price	,target_mean_price	,number_of_analyst	,recommendation_mean	,
+tailing_pe	,forward_pe	,average_volume	,ask	,ask_size	,bid	,bid_size	,record_date	 from (
+select 	rank() over( partition by code, cast(sys_load_time as date ) order by cast(sys_load_time as time ) desc ) as rnk
+,	code, cast(sys_load_time as date ) as record_date
+,	coalesce(
+		case when market_open = '' then null else market_open end 
+	,	case when regular_market_open = '' then null else regular_market_open end 
+	)::numeric as market_open
+,	coalesce(
+		case when market_previous_close = '' then null else market_previous_close end 
+	,	case when regular_market_previous_close = '' then null else regular_market_previous_close end 
+	)::numeric as market_previous_close
+,	coalesce(
+		case when market_day_high = '' then null else market_day_high end 
+	,	case when "regular_market_day_high" = '' then null else "regular_market_day_high" end 
+	)::numeric as market_day_high
+,	coalesce(
+		case when market_day_low = '' then null else market_day_low end 
+	,	case when "regular_market_day_low" = '' then null else "regular_market_day_low" end 
+	)::numeric as market_day_low
+,	coalesce(
+		case when market_price = '' then null else market_price end 
+	,	case when current_price = '' then null else current_price end 
+	)::numeric as market_price
+,	coalesce(
+		case when market_volume = '' then null else market_volume end 
+	,	case when "regualr_market_volume" = '' then null else "regualr_market_volume" end 
+	)::numeric as market_volume
+,	case when target_low_price = '' then null else target_low_price end ::numeric
+,	case when target_high_price = '' then null else target_high_price end ::numeric
+,	case when target_median_price = '' then null else target_median_price end ::numeric
+,	case when target_mean_price = '' then null else target_mean_price end ::numeric
+,	case when "number_of_analyst" = '' then null else "number_of_analyst" end ::numeric
+,	case when "recommendation_mean" = '' then null else "recommendation_mean" end ::numeric
+,	case when "tailing_pe" = '' or "tailing_pe" = 'Infinity' then null else "tailing_pe" end ::numeric
+,	case when forward_pe = '' or forward_pe = 'Infinity' then null else forward_pe end ::numeric
+,	case when average_volume = '' then null else average_volume end ::numeric
+,	case when ask = '' then null else ask end ::numeric
+,	case when ask_size = '' then null else ask_size end ::numeric
+,	case when bid = '' then null else bid end ::numeric
+,	case when bid_size = '' then null else bid_size end::numeric
+,	case when enterprise_revenue = '' then null else enterprise_revenue end ::numeric
+,	case when profit_margins = '' then null else profit_margins end ::numeric
+,	case when enterprise_ebitda = '' then null else enterprise_ebitda end::numeric
+,	case when "quarterly_earning_growth" = '' then null else "quarterly_earning_growth" end::numeric
+from temp.web_finance where  cast(sys_load_time as date ) > '2020-02-08' ) t where rnk = 1;  
+
+
+
+drop table if exists temp_short_2002010_200612;
+create temporary table temp_short_2002010_200612 as 
+select  concat(trim(t.product_code), '.AX') as code, short_position, total_in_issue, reported_position, record_date from (
+select rank() over ( partition by product_code,  cast(sys_load as date) order by  cast(sys_load as time) desc ) as rnk
+,product_code , short_position, total_in_issue, reported_position, cast(sys_load as date) as record_date from temp.daily_short
+where  cast(sys_load as date) > '20200208' ) t where rnk  = 1;
+
+
+
+
+drop table if exists temp_consensus_2002010_200612;
+create temporary table temp_consensus_2002010_200612 as 
+SELECT concat(t.code, '.AX') as code ,
+    t.load_date as record_date,
+        CASE
+            WHEN (t.sb + t.nb + t.hd + t.ns + t.ss) <> 0::numeric THEN (t.sb * 1::numeric + t.nb * 2::numeric + t.hd * 3::numeric + t.ns * 4::numeric + t.ss * 5::numeric) / (t.sb + t.nb + t.hd + t.ns + t.ss)
+            ELSE 5::numeric
+        END::numeric(5,3) AS adv_ratio,
+    t.sb + t.nb + t.hd + t.ns + t.ss AS num,
+	high,median,low,average
+   FROM ( SELECT web_consensus.code,
+                CASE
+                    WHEN web_consensus.buy::text = ''::text OR web_consensus.buy IS NULL THEN 0::numeric
+                    ELSE web_consensus.buy::numeric
+                END AS sb,
+                CASE
+                    WHEN web_consensus.overweight::text = ''::text OR web_consensus.overweight IS NULL THEN 0::numeric
+                    ELSE web_consensus.overweight::numeric
+                END AS nb,
+                CASE
+                    WHEN web_consensus.hold::text = ''::text OR web_consensus.hold IS NULL THEN 0::numeric
+                    ELSE web_consensus.hold::numeric
+                END AS hd,
+                CASE
+                    WHEN web_consensus.underweight::text = ''::text OR web_consensus.underweight IS NULL THEN 0::numeric
+                    ELSE web_consensus.underweight::numeric
+                END AS ns,
+                CASE
+                    WHEN web_consensus.sell::text = ''::text OR web_consensus.sell IS NULL THEN 0::numeric
+                    ELSE web_consensus.sell::numeric
+                END AS ss,
+		 	case when substring(high, 2,length(high)) = '' then null else cast(substring(high, 2,length(high)) as numeric) end as high
+,	case when substring(median, 2,length(median)) = '' then null else cast(substring(median, 2,length(median)) as numeric) end as median		
+,	case when substring(low, 2,length(low)) = '' then null else cast(substring(low, 2,length(low)) as numeric) end as low
+,	case when substring(avearge, 2,length(avearge)) = '' then null else cast(substring(avearge, 2,length(avearge)) as numeric) end as average
+,	web_consensus.sys_load_time::date AS load_date
+           FROM temp.web_consensus where cast(sys_load_time as date) > '2020-02-08') t;
+		   
+		   
+drop table if exists export_full_200210_200612;
+create temp table export_full_200210_200612 as 
+select f.code, f.market_open, f.market_previous_close, f.market_day_high, f.market_day_low, f.market_price, f.market_volume
+, c.low as target_low_price, c.high as target_high_price, c.median as target_median_price, c.average as target_mean_price
+, c.adv_ratio as recommendation_mean, c.num as number_of_analyst, f.tailing_pe, f.forward_pe, f.average_volume, f.ask, f.ask_size
+, f.bid, f.bid_size, s.short_position, s.total_in_issue, s.reported_position, cast(null as integer) as mi_buy
+, cast(null as integer) as mi_hold, cast(null as integer) as mi_sell, f.record_date
+from temp_finance_2002010_200612 f
+left join temp_short_2002010_200612 s
+on f.code = s.code and f.record_date = s.record_date
+left join temp_consensus_2002010_200612 c
+on f.code = c.code and f.record_date = c.record_date;
+
+
+select * from export_full_200210_200612 order by record_date , code;
