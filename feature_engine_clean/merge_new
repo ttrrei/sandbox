@@ -113,4 +113,7 @@ left join temp_consensus_2002010_200612 c
 on f.code = c.code and f.record_date = c.record_date;
 
 
-select * from export_full_200210_200612 order by record_date , code;
+drop table if exists public.export_full_200210_200612;
+create table public.export_full_200210_200612 as 
+select * from export_full_200210_200612 ;
+
