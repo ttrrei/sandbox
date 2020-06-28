@@ -52,7 +52,7 @@ from temp.web_finance where  cast(sys_load_time as date ) > '2020-02-08' ) t whe
 
 drop table if exists temp_short_2002010_200612;
 create temporary table temp_short_2002010_200612 as 
-select  concat(trim(t.product_code), '.AX') as code, short_position, total_in_issue, reported_position, record_date from (
+select  concat(trim(t.product_code), '.AX') as code, short_position::bigint, total_in_issue::bigint, reported_position::numeric, record_date from (
 select rank() over ( partition by product_code,  cast(sys_load as date) order by  cast(sys_load as time) desc ) as rnk
 ,product_code , short_position, total_in_issue, reported_position, cast(sys_load as date) as record_date from temp.daily_short
 where  cast(sys_load as date) > '20200208' ) t where rnk  = 1;
@@ -116,4 +116,10 @@ on f.code = c.code and f.record_date = c.record_date;
 drop table if exists public.export_full_200210_200612;
 create table public.export_full_200210_200612 as 
 select * from export_full_200210_200612 ;
+
+drop table if exists temp_export_full_171113_200612;
+
+create temporary table temp_export_full_171113_200612 as 
+select * from export_full_171113_200207
+union select * from export_full_200210_200612;
 
