@@ -36,7 +36,8 @@ create temp table transactions as  select  e.code
 ,   cast(e.reported_position as decimal(5,3)) as reported_position,   e.record_date
 from export_full_171113 e inner join hist_temp h
     on e.code = h.code and e.record_date = h.record_date
-where e.code not in ('EHL.AX');
+where e.code not in ('EHL.AX')
+and e.record_date <> '2018-04-26';
 
 drop table if exists org_consensus_index;
 create temp table org_consensus_index as select record_date , count(*)
