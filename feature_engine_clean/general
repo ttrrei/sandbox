@@ -1,7 +1,15 @@
-create function general() returns void
-    language plpgsql
-as
-$$
+-- FUNCTION: public.general()
+
+-- DROP FUNCTION public.general();
+
+CREATE OR REPLACE FUNCTION public.general(
+	)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
 BEGIN
 
 drop table if exists hist_temp;
@@ -13,7 +21,7 @@ select concat(code, '.AX') as code
 , cast(cast(low as numeric) as decimal(7,3)) as low
 , cast(cast(close as numeric) as decimal(7,3)) as close
 , trunc(cast(volume as numeric)) as volume
-from hist_171101;
+from hist_171001;
 
 drop table if exists transactions;
 create temp table transactions as  select  e.code
@@ -26,7 +34,7 @@ create temp table transactions as  select  e.code
 ,   e.recommendation_mean,   e.number_of_analyst-- ,   e.tailing_pe
 ,   e.forward_pe,   e.average_volume,   e.short_position,   e.total_in_issue
 ,   cast(e.reported_position as decimal(5,3)) as reported_position,   e.record_date
-from export_full_171113_200207 e inner join hist_temp h
+from export_full_171113 e inner join hist_temp h
     on e.code = h.code and e.record_date = h.record_date
 where e.code not in ('EHL.AX');
 
@@ -54,7 +62,7 @@ on s.code = e.code and s.date_index = e.date_index -25;
 
 END
 
-$$;
+$BODY$;
 
-alter function general() owner to postgres;
-
+ALTER FUNCTION public.general()
+    OWNER TO postgres;
