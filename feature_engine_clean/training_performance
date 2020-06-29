@@ -1,26 +1,34 @@
-create function training_performance() returns void
-    language plpgsql
-as
-$$
+-- FUNCTION: public.training_performance()
+
+-- DROP FUNCTION public.training_performance();
+
+CREATE OR REPLACE FUNCTION public.training_performance(
+	)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
 BEGIN
 
 drop table if exists org_consensus_index;
 create temp table org_consensus_index as select record_date , count(*)
-from public.export_full_171113_200207 where recommendation_mean is not null group by 1 having count(*) > 125 order by 1;
+from public.export_full_171113 where recommendation_mean is not null group by 1 having count(*) > 125 order by 1;
 drop table if exists mi_consensus_index;
 create temp table mi_consensus_index as select record_date, count(*),
     row_number() over (order by record_date) as rank
-from  public.export_full_171113_200207 where mi_buy is not null group by 1 order by 1 ;
+from  public.export_full_171113 where mi_buy is not null group by 1 order by 1 ;
 
 drop table if exists full_date_index;
 create temp table full_date_index as select record_date, count(*) as count, row_number() over (order by record_date) as date_index
-from public.export_full_171113_200207 group by 1 order by 1;
+from public.export_full_171113 group by 1 order by 1;
 
 drop table if exists idx_export ;
 create temp table idx_export as select e.*, i.date_index ,
         row_number() over (partition by e.record_date
                 order by case when e.forward_pe is null then 0 else e.forward_pe end desc) as pe_rank
-from public.export_full_171113_200207  e
+from public.export_full_171113  e
 inner join full_date_index i on e.record_date = i.record_date;
 
 drop table if exists performance;
@@ -53,7 +61,6 @@ and
       (target_median_price - target_low_price) / (target_high_price - target_low_price) end > 0.4
 ;
 
-
 drop table if exists temp_cal;
 create temp table temp_cal as
 select code, record_date, date_index, ratio25 as performance,
@@ -66,14 +73,9 @@ row_number() over( partition by record_date order by
     desc ) as rec_rank
 from temp_set ;
 
-drop table if exists calculation;
-create temp table calculation as 
-select * from temp_cal where rec_rank < 11;
-
-
-drop table if exists trainingset;
-create temp table trainingset as
-select c.code, c.record_date, c.date_index, c.performance
+drop table if exists temp_trainingset;
+create temp table temp_trainingset as
+select c.code, c.record_date, c.date_index, c.performance, c.rec_rank
 , ir.avg_irv_vl_03 as ir_avg_irv_vl_03
 , ir.avg_irv_vl_05 as ir_avg_irv_vl_05
 , ir.avg_irv_vl_10 as ir_avg_irv_vl_10
@@ -235,7 +237,7 @@ select c.code, c.record_date, c.date_index, c.performance
 , sg.devided_rank20_05 as sg_devided_rank20_05
 , sg.devided_rank10_05 as sg_devided_rank10_05
 
-from (select * from calculation where date_index > 20) c
+from (select * from temp_cal where date_index > 20) c
 inner join feature_ir_scale ir
 on c.code = ir.code and c.record_date = ir.record_date
 inner join feature_mp_scale mp
@@ -250,9 +252,176 @@ inner join feature_strength_scale sg
 on c.code = sg.code and c.record_date = sg.record_date
 ;
 
+drop table if exists trainingset;
+create temp table trainingset as 
+select "code" ,"record_date" ,"date_index" ,"performance"+1 as performance
+,cast(ir_avg_irv_vl_03*1000 as int) as ir_avg_irv_vl_03
+,cast(ir_avg_irv_vl_05*1000 as int) as ir_avg_irv_vl_05
+,cast(ir_avg_irv_vl_10*1000 as int) as ir_avg_irv_vl_10
+,cast(ir_avg_irv_vl_20*1000 as int) as ir_avg_irv_vl_20
+,cast(ir_avg_irv_rk_03*1000 as int) as ir_avg_irv_rk_03
+,cast(ir_avg_irv_rk_05*1000 as int) as ir_avg_irv_rk_05
+,cast(ir_avg_irv_rk_10*1000 as int) as ir_avg_irv_rk_10
+,cast(ir_avg_irv_rk_20*1000 as int) as ir_avg_irv_rk_20
+,cast(ir_avg_irr_vl_03*1000 as int) as ir_avg_irr_vl_03
+,cast(ir_avg_irr_vl_05*1000 as int) as ir_avg_irr_vl_05
+,cast(ir_avg_irr_vl_10*1000 as int) as ir_avg_irr_vl_10
+,cast(ir_avg_irr_vl_20*1000 as int) as ir_avg_irr_vl_20
+,cast(ir_avg_irr_rk_03*1000 as int) as ir_avg_irr_rk_03
+,cast(ir_avg_irr_rk_05*1000 as int) as ir_avg_irr_rk_05
+,cast(ir_avg_irr_rk_10*1000 as int) as ir_avg_irr_rk_10
+,cast(ir_avg_irr_rk_20*1000 as int) as ir_avg_irr_rk_20
+,cast(ir_mdn_irv_vl_03*1000 as int) as ir_mdn_irv_vl_03
+,cast(ir_mdn_irv_vl_05*1000 as int) as ir_mdn_irv_vl_05
+,cast(ir_mdn_irv_vl_10*1000 as int) as ir_mdn_irv_vl_10
+,cast(ir_mdn_irv_vl_20*1000 as int) as ir_mdn_irv_vl_20
+,cast(ir_mdn_irv_rk_03*1000 as int) as ir_mdn_irv_rk_03
+,cast(ir_mdn_irv_rk_05*1000 as int) as ir_mdn_irv_rk_05
+,cast(ir_mdn_irv_rk_10*1000 as int) as ir_mdn_irv_rk_10
+,cast(ir_mdn_irv_rk_20*1000 as int) as ir_mdn_irv_rk_20
+,cast(ir_mdn_irr_vl_03*1000 as int) as ir_mdn_irr_vl_03
+,cast(ir_mdn_irr_vl_05*1000 as int) as ir_mdn_irr_vl_05
+,cast(ir_mdn_irr_vl_10*1000 as int) as ir_mdn_irr_vl_10
+,cast(ir_mdn_irr_vl_20*1000 as int) as ir_mdn_irr_vl_20
+,cast(ir_mdn_irr_rk_03*1000 as int) as ir_mdn_irr_rk_03
+,cast(ir_mdn_irr_rk_05*1000 as int) as ir_mdn_irr_rk_05
+,cast(ir_mdn_irr_rk_10*1000 as int) as ir_mdn_irr_rk_10
+,cast(ir_mdn_irr_rk_20*1000 as int) as ir_mdn_irr_rk_20
+,cast(ir_diff_avg_irv_rk_20_10*1000 as int) as ir_diff_avg_irv_rk_20_10
+,cast(ir_diff_avg_irv_rk_20_05*1000 as int) as ir_diff_avg_irv_rk_20_05
+,cast(ir_diff_avg_irv_rk_20_03*1000 as int) as ir_diff_avg_irv_rk_20_03
+,cast(ir_diff_avg_irv_rk_10_05*1000 as int) as ir_diff_avg_irv_rk_10_05
+,cast(ir_diff_avg_irv_rk_10_03*1000 as int) as ir_diff_avg_irv_rk_10_03
+,cast(ir_diff_avg_irv_rk_05_03*1000 as int) as ir_diff_avg_irv_rk_05_03
+,cast(ir_diff_avg_irr_rk_20_10*1000 as int) as ir_diff_avg_irr_rk_20_10
+,cast(ir_diff_avg_irr_rk_20_05*1000 as int) as ir_diff_avg_irr_rk_20_05
+,cast(ir_diff_avg_irr_rk_20_03*1000 as int) as ir_diff_avg_irr_rk_20_03
+,cast(ir_diff_avg_irr_rk_10_05*1000 as int) as ir_diff_avg_irr_rk_10_05
+,cast(ir_diff_avg_irr_rk_10_03*1000 as int) as ir_diff_avg_irr_rk_10_03
+,cast(ir_diff_avg_irr_rk_05_03*1000 as int) as ir_diff_avg_irr_rk_05_03
+,cast(ir_diff_mdn_irv_rk_20_10*1000 as int) as ir_diff_mdn_irv_rk_20_10
+,cast(ir_diff_mdn_irv_rk_20_05*1000 as int) as ir_diff_mdn_irv_rk_20_05
+,cast(ir_diff_mdn_irv_rk_20_03*1000 as int) as ir_diff_mdn_irv_rk_20_03
+,cast(ir_diff_mdn_irv_rk_10_05*1000 as int) as ir_diff_mdn_irv_rk_10_05
+,cast(ir_diff_mdn_irv_rk_10_03*1000 as int) as ir_diff_mdn_irv_rk_10_03
+,cast(ir_diff_mdn_irv_rk_05_03*1000 as int) as ir_diff_mdn_irv_rk_05_03
+,cast(ir_diff_mdn_irr_rk_20_10*1000 as int) as ir_diff_mdn_irr_rk_20_10
+,cast(ir_diff_mdn_irr_rk_20_05*1000 as int) as ir_diff_mdn_irr_rk_20_05
+,cast(ir_diff_mdn_irr_rk_20_03*1000 as int) as ir_diff_mdn_irr_rk_20_03
+,cast(ir_diff_mdn_irr_rk_10_05*1000 as int) as ir_diff_mdn_irr_rk_10_05
+,cast(ir_diff_mdn_irr_rk_10_03*1000 as int) as ir_diff_mdn_irr_rk_10_03
+,cast(ir_diff_mdn_irr_rk_05_03*1000 as int) as ir_diff_mdn_irr_rk_05_03
+,cast(ir_devided_avg_irv_vl_20_10*1000 as int) as ir_devided_avg_irv_vl_20_10
+,cast(ir_devided_avg_irv_vl_20_05*1000 as int) as ir_devided_avg_irv_vl_20_05
+,cast(ir_devided_avg_irv_vl_20_03*1000 as int) as ir_devided_avg_irv_vl_20_03
+,cast(ir_devided_avg_irv_vl_10_05*1000 as int) as ir_devided_avg_irv_vl_10_05
+,cast(ir_devided_avg_irv_vl_10_03*1000 as int) as ir_devided_avg_irv_vl_10_03
+,cast(ir_devided_avg_irv_vl_05_03*1000 as int) as ir_devided_avg_irv_vl_05_03
+,cast(ir_devided_avg_irr_vl_20_10*1000 as int) as ir_devided_avg_irr_vl_20_10
+,cast(ir_devided_avg_irr_vl_20_05*1000 as int) as ir_devided_avg_irr_vl_20_05
+,cast(ir_devided_avg_irr_vl_20_03*1000 as int) as ir_devided_avg_irr_vl_20_03
+,cast(ir_devided_avg_irr_vl_10_05*1000 as int) as ir_devided_avg_irr_vl_10_05
+,cast(ir_devided_avg_irr_vl_10_03*1000 as int) as ir_devided_avg_irr_vl_10_03
+,cast(ir_devided_avg_irr_vl_05_03*1000 as int) as ir_devided_avg_irr_vl_05_03
+,cast(ir_devided_mdn_irv_vl_20_10*1000 as int) as ir_devided_mdn_irv_vl_20_10
+,cast(ir_devided_mdn_irv_vl_20_05*1000 as int) as ir_devided_mdn_irv_vl_20_05
+,cast(ir_devided_mdn_irv_vl_20_03*1000 as int) as ir_devided_mdn_irv_vl_20_03
+,cast(ir_devided_mdn_irv_vl_10_05*1000 as int) as ir_devided_mdn_irv_vl_10_05
+,cast(ir_devided_mdn_irv_vl_10_03*1000 as int) as ir_devided_mdn_irv_vl_10_03
+,cast(ir_devided_mdn_irv_vl_05_03*1000 as int) as ir_devided_mdn_irv_vl_05_03
+,cast(ir_devided_mdn_irr_vl_20_10*1000 as int) as ir_devided_mdn_irr_vl_20_10
+,cast(ir_devided_mdn_irr_vl_20_05*1000 as int) as ir_devided_mdn_irr_vl_20_05
+,cast(ir_devided_mdn_irr_vl_20_03*1000 as int) as ir_devided_mdn_irr_vl_20_03
+,cast(ir_devided_mdn_irr_vl_10_05*1000 as int) as ir_devided_mdn_irr_vl_10_05
+,cast(ir_devided_mdn_irr_vl_10_03*1000 as int) as ir_devided_mdn_irr_vl_10_03
+,cast(ir_devided_mdn_irr_vl_05_03*1000 as int) as ir_devided_mdn_irr_vl_05_03
+,cast(mp_slope_value_05*1000 as int) as mp_slope_value_05
+,cast(mp_slope_rank_05*1000 as int) as mp_slope_rank_05
+,cast(mp_slope_value_10*1000 as int) as mp_slope_value_10
+,cast(mp_slope_rank_10*1000 as int) as mp_slope_rank_10
+,cast(mp_slope_value_20*1000 as int) as mp_slope_value_20
+,cast(mp_slope_rank_20*1000 as int) as mp_slope_rank_20
+,cast(mp_devided_slope20_10*1000 as int) as mp_devided_slope20_10
+,cast(mp_devided_slope20_05*1000 as int) as mp_devided_slope20_05
+,cast(mp_devided_slope10_05*1000 as int) as mp_devided_slope10_05
+,cast(mp_devided_rank20_10*1000 as int) as mp_devided_rank20_10
+,cast(mp_devided_rank20_05*1000 as int) as mp_devided_rank20_05
+,cast(mp_devided_rank10_05*1000 as int) as mp_devided_rank10_05
+,cast(pe_mdn_pe_vl_03*1000 as int) as pe_mdn_pe_vl_03
+,cast(pe_mdn_pe_vl_05*1000 as int) as pe_mdn_pe_vl_05
+,cast(pe_mdn_pe_vl_10*1000 as int) as pe_mdn_pe_vl_10
+,cast(pe_mdn_pe_vl_20*1000 as int) as pe_mdn_pe_vl_20
+,cast(pe_mdn_pe_rk_03*1000 as int) as pe_mdn_pe_rk_03
+,cast(pe_mdn_pe_rk_05*1000 as int) as pe_mdn_pe_rk_05
+,cast(pe_mdn_pe_rk_10*1000 as int) as pe_mdn_pe_rk_10
+,cast(pe_mdn_pe_rk_20*1000 as int) as pe_mdn_pe_rk_20
+,cast(pe_devided_mdn_pe_vl_20_10*1000 as int) as pe_devided_mdn_pe_vl_20_10
+,cast(pe_devided_mdn_pe_vl_20_05*1000 as int) as pe_devided_mdn_pe_vl_20_05
+,cast(pe_devided_mdn_pe_vl_20_03*1000 as int) as pe_devided_mdn_pe_vl_20_03
+,cast(pe_devided_mdn_pe_vl_10_05*1000 as int) as pe_devided_mdn_pe_vl_10_05
+,cast(pe_devided_mdn_pe_vl_10_03*1000 as int) as pe_devided_mdn_pe_vl_10_03
+,cast(pe_devided_mdn_pe_vl_05_03*1000 as int) as pe_devided_mdn_pe_vl_05_03
+,cast(pe_devided_rank20_10*1000 as int) as pe_devided_rank20_10
+,cast(pe_devided_rank20_05*1000 as int) as pe_devided_rank20_05
+,cast(pe_devided_rank20_03*1000 as int) as pe_devided_rank20_03
+,cast(pe_devided_rank10_05*1000 as int) as pe_devided_rank10_05
+,cast(pe_devided_rank10_03*1000 as int) as pe_devided_rank10_03
+,cast(pe_devided_rank05_03*1000 as int) as pe_devided_rank05_03
+,cast(rk_rsv_rk_mdn10*1000 as int) as rk_rsv_rk_mdn10
+,cast(rk_rsv_rk_mdn05*1000 as int) as rk_rsv_rk_mdn05
+,cast(rk_rsv_rk_mdn03*1000 as int) as rk_rsv_rk_mdn03
+,cast(rk_rsv_vl_mdn10*1000 as int) as rk_rsv_vl_mdn10
+,cast(rk_rsv_vl_mdn05*1000 as int) as rk_rsv_vl_mdn05
+,cast(rk_rsv_vl_mdn03*1000 as int) as rk_rsv_vl_mdn03
+,cast(rk_ki_rk_mdn10*1000 as int) as rk_ki_rk_mdn10
+,cast(rk_ki_rk_mdn05*1000 as int) as rk_ki_rk_mdn05
+,cast(rk_ki_rk_mdn03*1000 as int) as rk_ki_rk_mdn03
+,cast(rk_ki_vl_mdn10*1000 as int) as rk_ki_vl_mdn10
+,cast(rk_ki_vl_mdn05*1000 as int) as rk_ki_vl_mdn05
+,cast(rk_ki_vl_mdn03*1000 as int) as rk_ki_vl_mdn03
+,cast(rk_devided_rsv_vl_mdn10_05*1000 as int) as rk_devided_rsv_vl_mdn10_05
+,cast(rk_devided_rsv_vl_mdn10_03*1000 as int) as rk_devided_rsv_vl_mdn10_03
+,cast(rk_devided_rsv_vl_mdn05_03*1000 as int) as rk_devided_rsv_vl_mdn05_03
+,cast(rk_devided_ki_vl_mdn10_05*1000 as int) as rk_devided_ki_vl_mdn10_05
+,cast(rk_devided_ki_vl_mdn10_03*1000 as int) as rk_devided_ki_vl_mdn10_03
+,cast(rk_devided_ki_vl_mdn05_03*1000 as int) as rk_devided_ki_vl_mdn05_03
+,cast(rk_devided_rsv_rank10_05*1000 as int) as rk_devided_rsv_rank10_05
+,cast(rk_devided_rsv_rank10_03*1000 as int) as rk_devided_rsv_rank10_03
+,cast(rk_devided_rsv_rank05_03*1000 as int) as rk_devided_rsv_rank05_03
+,cast(rk_devided_ki_rank10_05*1000 as int) as rk_devided_ki_rank10_05
+,cast(rk_devided_ki_rank10_03*1000 as int) as rk_devided_ki_rank10_03
+,cast(rk_devided_ki_rank05_03*1000 as int) as rk_devided_ki_rank05_03
+,cast(st_mdn_ss_rk_03*1000 as int) as st_mdn_ss_rk_03
+,cast(st_mdn_ss_rk_05*1000 as int) as st_mdn_ss_rk_05
+,cast(st_mdn_ss_rk_10*1000 as int) as st_mdn_ss_rk_10
+,cast(st_mdn_rp_rk_03*1000 as int) as st_mdn_rp_rk_03
+,cast(st_mdn_rp_rk_05*1000 as int) as st_mdn_rp_rk_05
+,cast(st_mdn_rp_rk_10*1000 as int) as st_mdn_rp_rk_10
+,cast(st_devided_ss_rk_20_10*1000 as int) as st_devided_ss_rk_20_10
+,cast(st_devided_ss_rk_20_05*1000 as int) as st_devided_ss_rk_20_05
+,cast(st_devided_ss_rk_10_05*1000 as int) as st_devided_ss_rk_10_05
+,cast(st_devided_rp_rk_20_10*1000 as int) as st_devided_rp_rk_20_10
+,cast(st_devided_rp_rk_20_05*1000 as int) as st_devided_rp_rk_20_05
+,cast(st_devided_rp_rk_10_05*1000 as int) as st_devided_rp_rk_10_05
+,cast(sg_strength05*1000 as int) as sg_strength05
+,cast(sg_strength10*1000 as int) as sg_strength10
+,cast(sg_strength20*1000 as int) as sg_strength20
+,cast(sg_rank20*1000 as int) as sg_rank20
+,cast(sg_rank10*1000 as int) as sg_rank10
+,cast(sg_rank05*1000 as int) as sg_rank05
+,cast(sg_devided_strength20_10*1000 as int) as sg_devided_strength20_10
+,cast(sg_devided_strength20_05*1000 as int) as sg_devided_strength20_05
+,cast(sg_devided_strength10_05*1000 as int) as sg_devided_strength10_05
+,cast(sg_devided_rank20_10*1000 as int) as sg_devided_rank20_10
+,cast(sg_devided_rank20_05*1000 as int) as sg_devided_rank20_05
+,cast(sg_devided_rank10_05*1000 as int) as sg_devided_rank10_05
+from (select 
+row_number() over(partition by date_index order by rec_rank) as tr_rank
+,* from temp_trainingset ) temp where tr_rank <21;
+
 END
 
-$$;
+$BODY$;
 
-alter function training_performance() owner to postgres;
-
+ALTER FUNCTION public.training_performance()
+    OWNER TO postgres;
