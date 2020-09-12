@@ -1,0 +1,43 @@
+with date_list as (
+select cast(sys_load_time as date)  as load_date from web_consensus group by cast(sys_load_time as date)
+union select cast(sys_load_time as date)  as load_date from web_finance group by cast(sys_load_time as date)
+union select cast(sys_load as date) as load_date from daily_short group by cast(sys_load as date)
+) , idx as (
+select load_date, extract(dow from load_date) as dow, row_number() over (order by load_date desc ) as rnum 
+from date_list group by load_date)
+select load_date, dow from idx where rnum <=20;
+	
+with sub_consensus as (
+select code
+, cast(buy as decimal(5,3)) as sb
+, cast(overweight as decimal(5,3)) as nb
+, cast(hold as decimal(5,3)) as hd
+, cast(underweight as decimal(5,3)) as ns
+, cast(sell as decimal(5,3)) as ss
+, cast(sys_load_time as date) as load_date 
+from web_consensus
+where buy is not null and buy <> ''
+and overweight is not null and overweight <> ''
+and hold is not null and hold <> ''
+and underweight is not null and underweight <> ''
+and sell is not null and sell <> ''
+), temp as ( select code, load_date
+, cast(sb+nb+hd+ns+ss as int) as cnt
+,cast((sb*1+nb*2+hd*3+ns*4+ss*5)/(sb+nb+hd+ns+ss) as decimal(5,3)) as weight
+from sub_consensus where sb+nb+hd+ns+ss > 3 )
+, date_list as (
+select cast(sys_load_time as date)  as load_date from web_consensus group by cast(sys_load_time as date)
+union select cast(sys_load_time as date)  as load_date from web_finance group by cast(sys_load_time as date)
+) , idx as (
+select load_date, extract(dow from load_date) as dow, row_number() over (order by load_date desc ) as rnum 
+from date_list group by load_date)
+select temp.code, temp.load_date, idx.rnum, idx.dow, temp.cnt, temp.weight from temp inner join idx 
+on temp.load_date =idx.load_date and idx.rnum <=20 order by load_date desc, code;
+
+
+select concat(trim(product_code), '.AX') as code, 
+case when short_position = '' then null else cast(short_position as bigint) end as short_position,
+case when total_in_issue = '' then null else cast(total_in_issue as bigint) end as total_in_issue, 
+case when reported_position = '' then null else cast(reported_position as numeric) end as reported_position,
+cast(sys_load as date) as load_date
+from public.daily_short;
