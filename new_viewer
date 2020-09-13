@@ -3,41 +3,76 @@ select cast(sys_load_time as date)  as load_date from web_consensus group by cas
 union select cast(sys_load_time as date)  as load_date from web_finance group by cast(sys_load_time as date)
 union select cast(sys_load as date) as load_date from daily_short group by cast(sys_load as date)
 ) , idx as (
-select load_date, extract(dow from load_date) as dow, row_number() over (order by load_date desc ) as rnum 
-from date_list group by load_date)
-select load_date, dow from idx where rnum <=20;
-	
-with sub_consensus as (
-select code
+select load_date, extract(dow from load_date)::int as dow, row_number() over (order by load_date desc ) as rnum 
+from date_list group by load_date
+), sub_finance as (
+select 	row_number() over( partition by code, cast(sys_load_time as date ) order by cast(sys_load_time as time ) desc ) as rnum
+,	code, cast(sys_load_time as date ) as load_date
+,	coalesce(case when market_open = '' then null else market_open end 
+	,	case when regular_market_open = '' then null else regular_market_open end 
+	)::decimal(6,3) as market_open
+,	coalesce(case when market_previous_close = '' then null else market_previous_close end 
+	,	case when regular_market_previous_close = '' then null else regular_market_previous_close end 
+	)::decimal(6,3) as market_previous_close
+,	coalesce(case when market_day_high = '' then null else market_day_high end 
+	,	case when "regular_market_day_high" = '' then null else "regular_market_day_high" end 
+	)::decimal(6,3) as market_day_high
+,	coalesce(case when market_day_low = '' then null else market_day_low end 
+	,	case when "regular_market_day_low" = '' then null else "regular_market_day_low" end 
+	)::decimal(6,3) as market_day_low
+,	coalesce(case when market_price = '' then null else market_price end 
+	,	case when current_price = '' then null else current_price end 
+	)::decimal(6,3) as market_price
+,	coalesce(case when market_volume = '' then null else market_volume end 
+	,	case when "regualr_market_volume" = '' then null else "regualr_market_volume" end 
+	)::bigint as market_volume
+,	case when target_low_price = '' then null else target_low_price end ::decimal(6,3)
+,	case when target_high_price = '' then null else target_high_price end ::decimal(6,3)
+,	case when target_median_price = '' then null else target_median_price end ::decimal(6,3)
+,	case when forward_pe = '' or forward_pe = 'Infinity' then null else forward_pe end ::decimal(6,1)
+from web_finance 
+), temp_consensus as (
+select concat(trim(code), '.AX') as code
 , cast(buy as decimal(5,3)) as sb
 , cast(overweight as decimal(5,3)) as nb
 , cast(hold as decimal(5,3)) as hd
 , cast(underweight as decimal(5,3)) as ns
 , cast(sell as decimal(5,3)) as ss
 , cast(sys_load_time as date) as load_date 
+, cast(sys_load_time as time) as load_time
 from web_consensus
 where buy is not null and buy <> ''
 and overweight is not null and overweight <> ''
 and hold is not null and hold <> ''
 and underweight is not null and underweight <> ''
 and sell is not null and sell <> ''
-), temp as ( select code, load_date
-, cast(sb+nb+hd+ns+ss as int) as cnt
-,cast((sb*1+nb*2+hd*3+ns*4+ss*5)/(sb+nb+hd+ns+ss) as decimal(5,3)) as weight
-from sub_consensus where sb+nb+hd+ns+ss > 3 )
-, date_list as (
-select cast(sys_load_time as date)  as load_date from web_consensus group by cast(sys_load_time as date)
-union select cast(sys_load_time as date)  as load_date from web_finance group by cast(sys_load_time as date)
-) , idx as (
-select load_date, extract(dow from load_date) as dow, row_number() over (order by load_date desc ) as rnum 
-from date_list group by load_date)
-select temp.code, temp.load_date, idx.rnum, idx.dow, temp.cnt, temp.weight from temp inner join idx 
-on temp.load_date =idx.load_date and idx.rnum <=20 order by load_date desc, code;
-
-
+), sub_consensus as ( select code, load_date
+, cast(sb+nb+hd+ns+ss as int) as analysis
+, cast((sb*1+nb*2+hd*3+ns*4+ss*5)/(sb+nb+hd+ns+ss) as decimal(5,3)) as weight
+, row_number() over( partition by code, load_date order by load_time desc ) as rnum
+from temp_consensus where sb+nb+hd+ns+ss > 3 
+), sub_short as (
 select concat(trim(product_code), '.AX') as code, 
 case when short_position = '' then null else cast(short_position as bigint) end as short_position,
 case when total_in_issue = '' then null else cast(total_in_issue as bigint) end as total_in_issue, 
-case when reported_position = '' then null else cast(reported_position as numeric) end as reported_position,
+case when reported_position = '' then null else cast(reported_position as decimal(31,8)) end as reported_position,
 cast(sys_load as date) as load_date
-from public.daily_short;
+, row_number() over ( partition by product_code,  cast(sys_load as date) order by  cast(sys_load as time) desc ) as rnum	
+from daily_short
+), output as (
+select i.load_date, i.dow 
+, f.code, f.market_open,  f.market_price, f.market_volume
+, f.target_low_price, f.target_high_price, f.target_median_price, f.forward_pe
+, c.analysis, c.weight
+, s.short_position
+from idx i
+inner join sub_finance f
+on i.load_date = f.load_date
+inner join sub_short s
+on i.load_date = s.load_date and f.code = s.code
+inner join sub_consensus c
+on i.load_date = c.load_date and f.code = c.code
+where f.rnum =1  and s.rnum = 1 and c.rnum  = 1
+and i.rnum <=20 and s.code = c.code
+) select * from output
+;
