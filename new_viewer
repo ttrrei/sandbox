@@ -5,32 +5,41 @@ union select cast(sys_load as date) as load_date from daily_short group by cast(
 ) , idx as (
 select load_date, extract(dow from load_date)::int as dow, row_number() over (order by load_date desc ) as rnum 
 from date_list group by load_date
-), sub_finance as (
+), temp_finance as (
 select 	row_number() over( partition by code, cast(sys_load_time as date ) order by cast(sys_load_time as time ) desc ) as rnum
 ,	code, cast(sys_load_time as date ) as load_date
 ,	coalesce(case when market_open = '' then null else market_open end 
 	,	case when regular_market_open = '' then null else regular_market_open end 
-	)::decimal(6,3) as market_open
+	)::decimal(6,3) as open
 ,	coalesce(case when market_previous_close = '' then null else market_previous_close end 
 	,	case when regular_market_previous_close = '' then null else regular_market_previous_close end 
-	)::decimal(6,3) as market_previous_close
-,	coalesce(case when market_day_high = '' then null else market_day_high end 
-	,	case when "regular_market_day_high" = '' then null else "regular_market_day_high" end 
-	)::decimal(6,3) as market_day_high
-,	coalesce(case when market_day_low = '' then null else market_day_low end 
-	,	case when "regular_market_day_low" = '' then null else "regular_market_day_low" end 
-	)::decimal(6,3) as market_day_low
+	)::decimal(6,3) as previous_close
 ,	coalesce(case when market_price = '' then null else market_price end 
 	,	case when current_price = '' then null else current_price end 
-	)::decimal(6,3) as market_price
+	)::decimal(6,3) as close
 ,	coalesce(case when market_volume = '' then null else market_volume end 
 	,	case when "regualr_market_volume" = '' then null else "regualr_market_volume" end 
-	)::bigint as market_volume
-,	case when target_low_price = '' then null else target_low_price end ::decimal(6,3)
-,	case when target_high_price = '' then null else target_high_price end ::decimal(6,3)
-,	case when target_median_price = '' then null else target_median_price end ::decimal(6,3)
+	)::bigint as volume
+,	case when target_low_price = '' then null else target_low_price end ::decimal(6,3) as tlow
+,	case when target_high_price = '' then null else target_high_price end ::decimal(6,3) as thigh
+,	case when target_median_price = '' then null else target_median_price end ::decimal(6,3) as tmedian
 ,	case when forward_pe = '' or forward_pe = 'Infinity' then null else forward_pe end ::decimal(6,1)
 from web_finance 
+), temp as (
+select code, load_date, open, previous_close, close, volume
+, coalesce(forward_pe
+, lag(forward_pe, 1, null) over(partition by code order by load_date)
+, lag(forward_pe, 2, null) over(partition by code order by load_date)
+, lag(forward_pe, 3, null) over(partition by code order by load_date)		   
+, lag(forward_pe, 4, null) over(partition by code order by load_date)	
+) as forward_pe
+, case when thigh is not null and tlow is not null and thigh <> tlow
+  then (tmedian- tlow)/ (thigh- tlow) else 0 end :: decimal(5,3) as target_ratio
+from temp_finance where rnum = 1 
+), sub_finance as (
+select code, load_date, open, previous_close, close, volume, forward_pe, target_ratio
+, rank() over(partition by  load_date order by forward_pe desc) as pe_rank
+from temp where forward_pe is not null and target_ratio > 0.5
 ), temp_consensus as (
 select concat(trim(code), '.AX') as code
 , cast(buy as decimal(5,3)) as sb
@@ -38,8 +47,8 @@ select concat(trim(code), '.AX') as code
 , cast(hold as decimal(5,3)) as hd
 , cast(underweight as decimal(5,3)) as ns
 , cast(sell as decimal(5,3)) as ss
-, cast(sys_load_time as date) as load_date 
-, cast(sys_load_time as time) as load_time
+, cast(sys_load_time as date) as load_date
+, row_number() over( partition by code, cast(sys_load_time as date) order by cast(sys_load_time as time) desc ) as rnum
 from web_consensus
 where buy is not null and buy <> ''
 and overweight is not null and overweight <> ''
@@ -49,22 +58,18 @@ and sell is not null and sell <> ''
 ), sub_consensus as ( select code, load_date
 , cast(sb+nb+hd+ns+ss as int) as analysis
 , cast((sb*1+nb*2+hd*3+ns*4+ss*5)/(sb+nb+hd+ns+ss) as decimal(5,3)) as weight
-, row_number() over( partition by code, load_date order by load_time desc ) as rnum
-from temp_consensus where sb+nb+hd+ns+ss > 3 
+from temp_consensus where sb+nb+hd+ns+ss > 3 and rnum = 1
 ), sub_short as (
-select concat(trim(product_code), '.AX') as code, 
+select concat(trim(product_code), '.AX') as code, cast(sys_load as date) as load_date,
 case when short_position = '' then null else cast(short_position as bigint) end as short_position,
 case when total_in_issue = '' then null else cast(total_in_issue as bigint) end as total_in_issue, 
-case when reported_position = '' then null else cast(reported_position as decimal(31,8)) end as reported_position,
-cast(sys_load as date) as load_date
+case when reported_position = '' then null else cast(reported_position as decimal(31,8)) end as reported_position
 , row_number() over ( partition by product_code,  cast(sys_load as date) order by  cast(sys_load as time) desc ) as rnum	
 from daily_short
 ), output as (
-select i.load_date, i.dow 
-, f.code, f.market_open,  f.market_price, f.market_volume
-, f.target_low_price, f.target_high_price, f.target_median_price, f.forward_pe
-, c.analysis, c.weight
-, s.short_position
+select i.load_date, i.dow , c.analysis, c.weight, s.short_position
+, f.code, f.open,  f.close, f.volume, f.target_ratio, f.pe_rank
+, (c.weight*0.5 + pe_rank/100.0)::decimal(5,3)  as total_rank
 from idx i
 inner join sub_finance f
 on i.load_date = f.load_date
@@ -72,7 +77,5 @@ inner join sub_short s
 on i.load_date = s.load_date and f.code = s.code
 inner join sub_consensus c
 on i.load_date = c.load_date and f.code = c.code
-where f.rnum =1  and s.rnum = 1 and c.rnum  = 1
-and i.rnum <=20 and s.code = c.code
-) select * from output
-;
+where  s.rnum = 1 and i.rnum <=20 and s.code = c.code
+) select * from output order by load_date, total_rank;
