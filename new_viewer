@@ -79,3 +79,34 @@ inner join sub_consensus c
 on i.load_date = c.load_date and f.code = c.code
 where  s.rnum = 1 and i.rnum <=20 and s.code = c.code
 ) select * from output order by load_date, total_rank;
+
+
+
+with temp_pool as (select code as code0
+, lead(code, 1, null) over (partition by total_rank order by rnum) as code1
+, lead(code, 2, null) over (partition by total_rank order by rnum) as code2
+, lead(code, 3, null) over (partition by total_rank order by rnum) as code3
+, lead(code, 4, null) over (partition by total_rank order by rnum) as code4
+, load_date, rnum, total_rank from v_current_list )
+, recon as (select p1.load_date,p1.rnum
+, json_array_elements_text(json_build_array(
+  p1.code0, p1.code1, p1.code2, p1.code3, p1.code4
+, p2.code0, p2.code1, p2.code2, p2.code3, p2.code4
+, p3.code0, p3.code1, p3.code2, p3.code3, p3.code4
+, p4.code0, p4.code1, p4.code2, p4.code3, p4.code4
+, p5.code0, p5.code1, p5.code2, p5.code3, p5.code4	
+)) as code 
+, json_array_elements_text(json_build_array(
+    1, 0.9, 0.8, 0.7, 0.6
+, 0.9, 0.8, 0.7, 0.6, 0.5
+, 0.8, 0.7, 0.6, 0.5, 0.4
+, 0.7, 0.6, 0.5, 0.4, 0.3	
+, 0.6, 0.5, 0.4, 0.3, 0.2
+)) as weight
+from temp_pool p1
+inner join temp_pool p2 on p1.rnum = p2.rnum and p1.total_rank = 1 and p2.total_rank = 2
+inner join temp_pool p3 on p1.rnum = p3.rnum and p1.total_rank = 1 and p3.total_rank = 3
+inner join temp_pool p4 on p1.rnum = p4.rnum and p1.total_rank = 1 and p4.total_rank = 4
+inner join temp_pool p5 on p1.rnum = p5.rnum and p1.total_rank = 1 and p5.total_rank = 5)
+select load_date, code, sum( cast(weight as numeric) ) as weight
+  from recon where rnum <= 5 group by load_date, code  order by load_date desc, weight desc;
