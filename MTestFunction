@@ -1,0 +1,76 @@
+-- FUNCTION: public.code_list_generator()
+
+-- DROP FUNCTION public.code_list_generator();
+
+CREATE OR REPLACE FUNCTION main.data_cleansing(
+	)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+BEGIN
+insert into main.sdc 
+SELECT "INDEX NAME", "INDEX CODE", "INDEX KEY", "EFFECTIVE DATE", "COMPANY", "RIC", "BLOOMBERG TICKER",
+ "CUSIP", "ISIN", "SEDOL", "TICKER", "GV KEY", "STOCK KEY", "GICS CODE", "DJI INDUSTRY CODE",
+ "ALTERNATE CLASSIFICATION CODE", "MIC", "COUNTRY OF DOMICILE", "COUNTRY OF LISTING", "REGION", "SIZE",
+ "CAP RANGE", "CURRENCY CODE", "LOCAL PRICE", "FX RATE", "SHARES OUTSTANDING", "MARKET CAP", "IWF", "AWF",
+ "GROWTH", "VALUE", "INDEX SHARES", "INDEX MARKET CAP", "INDEX WEIGHT", "DAILY PRICE RETURN",
+ "DAILY TOTAL RETURN", "DIVIDEND", "NET DIVIDEND"
+, substring (source_file, position('.' in source_file)-3 , 3) as info_type
+, cast((substring(source_file, 1,4) || '-'|| substring(source_file, 5,2) || '-' || substring(source_file, 7,2)) as date) as record_time
+	FROM landing.sdc_landing c
+INNER JOIN landing.meta_landing m
+ON c.batch_id = m.batch_id
+AND m.is_executed is false
+ON CONFLICT (index_name, ric, info_type, record_date) do nothing;
+ 
+insert into main.sde
+SELECT "INDEX NAME", "INDEX CODE", "INDEX KEY", "INDEX CURRENCY", "ACTION TYPE", "ACTION GROUP", "STATUS", 
+"ANNOUNCED DATE", "LAST UPDATED DATE", "CLOSE OF BUSINESS DATE", "EFFECTIVE DATE", 
+"REFERENCE DATE", "ANNOUNCEMENT ID", "NEW INDEX PROFILE", "SEQUENCE NO.", "STOCK KEY", 
+"CURRENT COMPANY NAME", "NEW COMPANY NAME"
+, case when "CURRENT RIC" is null then '' else "CURRENT RIC" end
+, "NEW RIC", "CURRENT BLOOMBERG TICKER", 
+"NEW BLOOMBERG TICKER", "CURRENT CUSIP", "NEW CUSIP", "CURRENT ISIN", "NEW ISIN", "CURRENT SEDOL", 
+"NEW SEDOL", "CURRENT TICKER", "NEW TICKER", "CURRENT GV KEY", "NEW GV KEY", "CURRENT GICS CODE", 
+"NEW GICS CODE", "CURRENT DJI INDUSTRY CODE", "NEW DJI INDUSTRY CODE", "CURRENT ALTERNATE CLASSIFICATION CODE", 
+"NEW ALTERNATE CLASSIFICATION CODE", "CURRENT STOCK ATTRIBUTES", "NEW STOCK ATTRIBUTES", "CURRENT MIC", "NEW MIC", 
+"CURRENT COUNTRY OF DOMICILE", "NEW COUNTRY OF DOMICILE", "CURRENT COUNTRY OF LISTING", "NEW COUNTRY OF LISTING", 
+"CURRENT REGION", "NEW REGION", "CURRENT SIZE", "NEW SIZE", "CURRENT CAP RANGE", "NEW CAP RANGE", "CURRENT SHARIAH", 
+"NEW SHARIAH", "CURRENT CURRENCY CODE", "NEW CURRENCY CODE", "FX RATE", "CURRENT SHARES OUTSTANDING", "NEW SHARES OUTSTANDING", 
+"CURRENT IWF", "NEW IWF", "CURRENT AWF", "NEW AWF", "GROWTH", "VALUE", "CURRENT INDEX SHARES", "NEW INDEX SHARES", 
+"INDEX SHARES PRIOR EVENTS", "INDEX SHARES POST EVENTS", "RATIO RECEIVED", "RATIO HELD", "SUBSCRIPTION PRICE", 
+"PRICE ADJUSTMENT", "CURRENT PRICE", "NEW PRICE", "DIVIDEND CURRENCY", "DIVIDEND", "NET DIVIDEND", "ISSUANCE FEE", "FRANKING RATE", 
+"CURRENT TAX RATE", "NEW TAX RATE", "ACQUIRER NAME", "CASH AMOUNT", "SPIN/TARGET NAME", "SPIN/TARGET TICKER", "SPIN/TARGET STOCK KEY", 
+"SPIN/TARGET MIC", "SPIN/TARGET IS INDEX CO", "REPLACEMENT STOCK KEY" 
+, case when "COMMENTS" is null then '' else "COMMENTS" end 
+, cast((substring(source_file, 1,4) || '-'|| substring(source_file, 5,2) || '-' || substring(source_file, 7,2)) as date) as record_time
+	FROM landing.sde_landing e
+INNER JOIN landing.meta_landing m
+ON e.batch_id = m.batch_id
+AND m.is_executed is false
+ ON CONFLICT (index_name, current_ric, comments, record_date) do nothing;
+ 
+insert into main.sdl
+SELECT "CHANGE", "DATE OF INDEX", "INDEX NAME", "INDEX CODE", "INDEX KEY", "GICS CODE", 
+"ISO CODE", "INDEX VALUE", "CLOSE MARKET CAP", "CLOSE DIVISOR", "CLOSE COUNT", "DAILY RETURN",
+"INDEX DIVIDEND", "ADJ MARKET CAP", "ADJ DIVISOR", "ADJ COUNT"
+, cast((substring(source_file, 1,4) || '-'|| substring(source_file, 5,2) || '-' || substring(source_file, 7,2)) as date) as record_time
+	FROM landing.sdl_landing l
+INNER JOIN landing.meta_landing m
+ON l.batch_id = m.batch_id
+AND m.is_executed is false
+ ON CONFLICT (index_name, date_of_index, record_date) do nothing;
+
+update landing.meta_landing
+set is_executed = true 
+where is_executed = false;
+
+END; 
+$BODY$;
+
+ALTER FUNCTION main.data_cleansing()
+    OWNER TO postgres;
