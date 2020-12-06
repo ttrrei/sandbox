@@ -1,153 +1,269 @@
-drop table if exists landing.sdc;
-create table landing.sdc (
-index_name	varchar(100),
-index_code	varchar(100),
-index_key	varchar(100),
-effective_date	varchar(100),
-company	varchar(100),
-ric	varchar(100),
-bloomberg_ticker	varchar(100),
-cusip	varchar(100),
-isin	varchar(100),
-sedol	varchar(100),
-ticker	varchar(100),
-gv_key	varchar(100),
-stock_key	varchar(100),
-gics_code	varchar(100),
-dji_industry_code	varchar(100),
-alternate_classification_code	varchar(100),
-mic	varchar(100),
-country_of_domicile	varchar(100),
-country_of_listing	varchar(100),
-region	varchar(100),
-size	varchar(100),
-cap_range	varchar(100),
-currency_code	varchar(100),
-local_price	varchar(100),
-fx_rate	varchar(100),
-shares_outstanding	varchar(100),
-market_cap	varchar(100),
-iwf	varchar(100),
-awf	varchar(100),
-growth	varchar(100),
-value	varchar(100),
-index_shares	varchar(100),
-index_market_cap	varchar(100),
-index_weight	varchar(100),
-daily_price_return	varchar(100),
-daily_total_return	varchar(100),
-dividend	varchar(100),
-net_dividend	varchar(100));
+-- Table: landing.meta_landing
 
-drop table if exists landing.sdl;
-create table landing.sdl(
-change	varchar(100),
-date_of_index	varchar(100),
-index_name	varchar(100),
-index_code	varchar(100),
-index_key	varchar(100),
-gics_code	varchar(100),
-iso_code	varchar(100),
-index_value	varchar(100),
-close_market_cap	varchar(100),
-close_divisor	varchar(100),
-close_count	varchar(100),
-daily_return	varchar(100),
-index_dividend	varchar(100),
-adj_market_cap	varchar(100),
-adj_divisor	varchar(100),
-adj_count	varchar(100));
+-- DROP TABLE landing.meta_landing;
 
-drop table if exists landing.sde;
-create table landing.sde (
-index_name	varchar(100),
-index_code	varchar(100),
-index_key	varchar(100),
-index_currency	varchar(100),
-action_type	varchar(100),
-action_group	varchar(100),
-status	varchar(100),
-announced_date	varchar(100),
-last_updated_date	varchar(100),
-close_of_business_date	varchar(100),
-effective_date	varchar(100),
-reference_date	varchar(100),
-announcement_id	varchar(100),
-new_index_profile	varchar(100),
-sequence_no	varchar(100),
-stock_key	varchar(100),
-current_company_name	varchar(100),
-new_company_name	varchar(100),
-current_ric	varchar(100),
-new_ric	varchar(100),
-current_bloomberg_ticker	varchar(100),
-new_bloomberg_ticker	varchar(100),
-current_cusip	varchar(100),
-new_cusip	varchar(100),
-current_isin	varchar(100),
-new_isin	varchar(100),
-current_sedol	varchar(100),
-new_sedol	varchar(100),
-current_ticker	varchar(100),
-new_ticker	varchar(100),
-current_gv_key	varchar(100),
-new_gv_key	varchar(100),
-current_gics_code	varchar(100),
-new_gics_code	varchar(100),
-current_dji_industry_code	varchar(100),
-new_dji_industry_code	varchar(100),
-current_alternate_classification_code	varchar(100),
-new_alternate_classification_code	varchar(100),
-current_stock_attributes	varchar(100),
-new_stock_attributes	varchar(100),
-current_mic	varchar(100),
-new_mic	varchar(100),
-current_country_of_domicile	varchar(100),
-new_country_of_domicile	varchar(100),
-current_country_of_listing	varchar(100),
-new_country_of_listing	varchar(100),
-current_region	varchar(100),
-new_region	varchar(100),
-current_size	varchar(100),
-new_size	varchar(100),
-current_cap_range	varchar(100),
-new_cap_range	varchar(100),
-current_shariah	varchar(100),
-new_shariah	varchar(100),
-current_currency_code	varchar(100),
-new_currency_code	varchar(100),
-fx_rate	varchar(100),
-current_shares_outstanding	varchar(100),
-new_shares_outstanding	varchar(100),
-current_iwf	varchar(100),
-new_iwf	varchar(100),
-current_awf	varchar(100),
-new_awf	varchar(100),
-growth	varchar(100),
-value	varchar(100),
-current_index_shares	varchar(100),
-new_index_shares	varchar(100),
-index_shares_prior_events	varchar(100),
-index_shares_post_events	varchar(100),
-ratio_received	varchar(100),
-ratio_held	varchar(100),
-subscription_price	varchar(100),
-price_adjustment	varchar(100),
-current_price	varchar(100),
-new_price	varchar(100),
-dividend_currency	varchar(100),
-dividend	varchar(100),
-net_dividend	varchar(100),
-issuance_fee	varchar(100),
-franking_rate	varchar(100),
-current_tax_rate	varchar(100),
-new_tax_rate	varchar(100),
-acquirer_name	varchar(100),
-cash_amount	varchar(100),
-spin_target_name	varchar(100),
-spin_target_ticker	varchar(100),
-spin_target_stock_key	varchar(100),
-spin_target_mic	varchar(100),
-spin_target_is_index_co	varchar(100),
-replacement_stock_key	varchar(100),
-comments	varchar(100));
+CREATE TABLE landing.meta_landing
+(
+    index bigint,
+    batch_id text COLLATE pg_catalog."default",
+    start_time text COLLATE pg_catalog."default",
+    end_time text COLLATE pg_catalog."default",
+    is_executed boolean DEFAULT false
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE landing.meta_landing
+    OWNER to postgres;
+
+-- Index: ix_meta_landing_index
+
+-- DROP INDEX landing.ix_meta_landing_index;
+
+CREATE INDEX ix_meta_landing_index
+    ON landing.meta_landing USING btree
+    (index)
+    TABLESPACE pg_default;
+    
+-- Table: landing.sdc_landing
+
+-- DROP TABLE landing.sdc_landing;
+
+CREATE TABLE landing.sdc_landing
+(
+    index character varying(500) COLLATE pg_catalog."default",
+    "INDEX NAME" character varying(500) COLLATE pg_catalog."default",
+    "INDEX CODE" character varying(500) COLLATE pg_catalog."default",
+    "INDEX KEY" character varying(500) COLLATE pg_catalog."default",
+    "EFFECTIVE DATE" character varying(500) COLLATE pg_catalog."default",
+    "COMPANY" character varying(500) COLLATE pg_catalog."default",
+    "RIC" character varying(500) COLLATE pg_catalog."default",
+    "BLOOMBERG TICKER" character varying(500) COLLATE pg_catalog."default",
+    "CUSIP" character varying(500) COLLATE pg_catalog."default",
+    "ISIN" character varying(500) COLLATE pg_catalog."default",
+    "SEDOL" character varying(500) COLLATE pg_catalog."default",
+    "TICKER" character varying(500) COLLATE pg_catalog."default",
+    "GV KEY" character varying(500) COLLATE pg_catalog."default",
+    "STOCK KEY" character varying(500) COLLATE pg_catalog."default",
+    "GICS CODE" character varying(500) COLLATE pg_catalog."default",
+    "DJI INDUSTRY CODE" character varying(500) COLLATE pg_catalog."default",
+    "ALTERNATE CLASSIFICATION CODE" character varying(500) COLLATE pg_catalog."default",
+    "MIC" character varying(500) COLLATE pg_catalog."default",
+    "COUNTRY OF DOMICILE" character varying(500) COLLATE pg_catalog."default",
+    "COUNTRY OF LISTING" character varying(500) COLLATE pg_catalog."default",
+    "REGION" character varying(500) COLLATE pg_catalog."default",
+    "SIZE" character varying(500) COLLATE pg_catalog."default",
+    "CAP RANGE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENCY CODE" character varying(500) COLLATE pg_catalog."default",
+    "LOCAL PRICE" character varying(500) COLLATE pg_catalog."default",
+    "FX RATE" character varying(500) COLLATE pg_catalog."default",
+    "SHARES OUTSTANDING" character varying(500) COLLATE pg_catalog."default",
+    "MARKET CAP" character varying(500) COLLATE pg_catalog."default",
+    "IWF" character varying(500) COLLATE pg_catalog."default",
+    "AWF" character varying(500) COLLATE pg_catalog."default",
+    "GROWTH" character varying(500) COLLATE pg_catalog."default",
+    "VALUE" character varying(500) COLLATE pg_catalog."default",
+    "INDEX SHARES" character varying(500) COLLATE pg_catalog."default",
+    "INDEX MARKET CAP" character varying(500) COLLATE pg_catalog."default",
+    "INDEX WEIGHT" character varying(500) COLLATE pg_catalog."default",
+    "DAILY PRICE RETURN" character varying(500) COLLATE pg_catalog."default",
+    "DAILY TOTAL RETURN" character varying(500) COLLATE pg_catalog."default",
+    "DIVIDEND" character varying(500) COLLATE pg_catalog."default",
+    "NET DIVIDEND" character varying(500) COLLATE pg_catalog."default",
+    source_file character varying(500) COLLATE pg_catalog."default",
+    batch_id character varying(500) COLLATE pg_catalog."default",
+    sys_load_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE landing.sdc_landing
+    OWNER to postgres;
+
+GRANT SELECT ON TABLE landing.sdc_landing TO mage;
+
+GRANT ALL ON TABLE landing.sdc_landing TO postgres;
+
+-- Index: ix_sdc_landing_index
+
+-- DROP INDEX landing.ix_sdc_landing_index;
+
+CREATE INDEX ix_sdc_landing_index
+    ON landing.sdc_landing USING btree
+    (index COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+    
+-- Table: landing.sde_landing
+
+-- DROP TABLE landing.sde_landing;
+
+CREATE TABLE landing.sde_landing
+(
+    index character varying(500) COLLATE pg_catalog."default",
+    "INDEX NAME" character varying(500) COLLATE pg_catalog."default",
+    "INDEX CODE" character varying(500) COLLATE pg_catalog."default",
+    "INDEX KEY" character varying(500) COLLATE pg_catalog."default",
+    "INDEX CURRENCY" character varying(500) COLLATE pg_catalog."default",
+    "ACTION TYPE" character varying(500) COLLATE pg_catalog."default",
+    "ACTION GROUP" character varying(500) COLLATE pg_catalog."default",
+    "STATUS" character varying(500) COLLATE pg_catalog."default",
+    "ANNOUNCED DATE" character varying(500) COLLATE pg_catalog."default",
+    "LAST UPDATED DATE" character varying(500) COLLATE pg_catalog."default",
+    "CLOSE OF BUSINESS DATE" character varying(500) COLLATE pg_catalog."default",
+    "EFFECTIVE DATE" character varying(500) COLLATE pg_catalog."default",
+    "REFERENCE DATE" character varying(500) COLLATE pg_catalog."default",
+    "ANNOUNCEMENT ID" character varying(500) COLLATE pg_catalog."default",
+    "NEW INDEX PROFILE" character varying(500) COLLATE pg_catalog."default",
+    "SEQUENCE NO." character varying(500) COLLATE pg_catalog."default",
+    "STOCK KEY" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT COMPANY NAME" character varying(500) COLLATE pg_catalog."default",
+    "NEW COMPANY NAME" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT RIC" character varying(500) COLLATE pg_catalog."default",
+    "NEW RIC" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT BLOOMBERG TICKER" character varying(500) COLLATE pg_catalog."default",
+    "NEW BLOOMBERG TICKER" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT CUSIP" character varying(500) COLLATE pg_catalog."default",
+    "NEW CUSIP" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT ISIN" character varying(500) COLLATE pg_catalog."default",
+    "NEW ISIN" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT SEDOL" character varying(500) COLLATE pg_catalog."default",
+    "NEW SEDOL" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT TICKER" character varying(500) COLLATE pg_catalog."default",
+    "NEW TICKER" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT GV KEY" character varying(500) COLLATE pg_catalog."default",
+    "NEW GV KEY" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT GICS CODE" character varying(500) COLLATE pg_catalog."default",
+    "NEW GICS CODE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT DJI INDUSTRY CODE" character varying(500) COLLATE pg_catalog."default",
+    "NEW DJI INDUSTRY CODE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT ALTERNATE CLASSIFICATION CODE" character varying(500) COLLATE pg_catalog."default",
+    "NEW ALTERNATE CLASSIFICATION CODE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT STOCK ATTRIBUTES" character varying(500) COLLATE pg_catalog."default",
+    "NEW STOCK ATTRIBUTES" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT MIC" character varying(500) COLLATE pg_catalog."default",
+    "NEW MIC" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT COUNTRY OF DOMICILE" character varying(500) COLLATE pg_catalog."default",
+    "NEW COUNTRY OF DOMICILE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT COUNTRY OF LISTING" character varying(500) COLLATE pg_catalog."default",
+    "NEW COUNTRY OF LISTING" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT REGION" character varying(500) COLLATE pg_catalog."default",
+    "NEW REGION" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT SIZE" character varying(500) COLLATE pg_catalog."default",
+    "NEW SIZE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT CAP RANGE" character varying(500) COLLATE pg_catalog."default",
+    "NEW CAP RANGE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT SHARIAH" character varying(500) COLLATE pg_catalog."default",
+    "NEW SHARIAH" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT CURRENCY CODE" character varying(500) COLLATE pg_catalog."default",
+    "NEW CURRENCY CODE" character varying(500) COLLATE pg_catalog."default",
+    "FX RATE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT SHARES OUTSTANDING" character varying(500) COLLATE pg_catalog."default",
+    "NEW SHARES OUTSTANDING" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT IWF" character varying(500) COLLATE pg_catalog."default",
+    "NEW IWF" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT AWF" character varying(500) COLLATE pg_catalog."default",
+    "NEW AWF" character varying(500) COLLATE pg_catalog."default",
+    "GROWTH" character varying(500) COLLATE pg_catalog."default",
+    "VALUE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT INDEX SHARES" character varying(500) COLLATE pg_catalog."default",
+    "NEW INDEX SHARES" character varying(500) COLLATE pg_catalog."default",
+    "INDEX SHARES PRIOR EVENTS" character varying(500) COLLATE pg_catalog."default",
+    "INDEX SHARES POST EVENTS" character varying(500) COLLATE pg_catalog."default",
+    "RATIO RECEIVED" character varying(500) COLLATE pg_catalog."default",
+    "RATIO HELD" character varying(500) COLLATE pg_catalog."default",
+    "SUBSCRIPTION PRICE" character varying(500) COLLATE pg_catalog."default",
+    "PRICE ADJUSTMENT" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT PRICE" character varying(500) COLLATE pg_catalog."default",
+    "NEW PRICE" character varying(500) COLLATE pg_catalog."default",
+    "DIVIDEND CURRENCY" character varying(500) COLLATE pg_catalog."default",
+    "DIVIDEND" character varying(500) COLLATE pg_catalog."default",
+    "NET DIVIDEND" character varying(500) COLLATE pg_catalog."default",
+    "ISSUANCE FEE" character varying(500) COLLATE pg_catalog."default",
+    "FRANKING RATE" character varying(500) COLLATE pg_catalog."default",
+    "CURRENT TAX RATE" character varying(500) COLLATE pg_catalog."default",
+    "NEW TAX RATE" character varying(500) COLLATE pg_catalog."default",
+    "ACQUIRER NAME" character varying(500) COLLATE pg_catalog."default",
+    "CASH AMOUNT" character varying(500) COLLATE pg_catalog."default",
+    "SPIN/TARGET NAME" character varying(500) COLLATE pg_catalog."default",
+    "SPIN/TARGET TICKER" character varying(500) COLLATE pg_catalog."default",
+    "SPIN/TARGET STOCK KEY" character varying(500) COLLATE pg_catalog."default",
+    "SPIN/TARGET MIC" character varying(500) COLLATE pg_catalog."default",
+    "SPIN/TARGET IS INDEX CO" character varying(500) COLLATE pg_catalog."default",
+    "REPLACEMENT STOCK KEY" character varying(500) COLLATE pg_catalog."default",
+    "COMMENTS" character varying(500) COLLATE pg_catalog."default",
+    source_file character varying(500) COLLATE pg_catalog."default",
+    batch_id character varying(500) COLLATE pg_catalog."default",
+    sys_load_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE landing.sde_landing
+    OWNER to postgres;
+
+GRANT SELECT ON TABLE landing.sde_landing TO mage;
+
+GRANT ALL ON TABLE landing.sde_landing TO postgres;
+
+-- Index: ix_sde_landing_index
+
+-- DROP INDEX landing.ix_sde_landing_index;
+
+CREATE INDEX ix_sde_landing_index
+    ON landing.sde_landing USING btree
+    (index COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
+    
+-- Table: landing.sdl_landing
+
+-- DROP TABLE landing.sdl_landing;
+
+CREATE TABLE landing.sdl_landing
+(
+    index character varying(500) COLLATE pg_catalog."default",
+    "CHANGE" character varying(500) COLLATE pg_catalog."default",
+    "DATE OF INDEX" character varying(500) COLLATE pg_catalog."default",
+    "INDEX NAME" character varying(500) COLLATE pg_catalog."default",
+    "INDEX CODE" character varying(500) COLLATE pg_catalog."default",
+    "INDEX KEY" character varying(500) COLLATE pg_catalog."default",
+    "GICS CODE" character varying(500) COLLATE pg_catalog."default",
+    "ISO CODE" character varying(500) COLLATE pg_catalog."default",
+    "INDEX VALUE" character varying(500) COLLATE pg_catalog."default",
+    "CLOSE MARKET CAP" character varying(500) COLLATE pg_catalog."default",
+    "CLOSE DIVISOR" character varying(500) COLLATE pg_catalog."default",
+    "CLOSE COUNT" character varying(500) COLLATE pg_catalog."default",
+    "DAILY RETURN" character varying(500) COLLATE pg_catalog."default",
+    "INDEX DIVIDEND" character varying(500) COLLATE pg_catalog."default",
+    "ADJ MARKET CAP" character varying(500) COLLATE pg_catalog."default",
+    "ADJ DIVISOR" character varying(500) COLLATE pg_catalog."default",
+    "ADJ COUNT" character varying(500) COLLATE pg_catalog."default",
+    source_file character varying(500) COLLATE pg_catalog."default",
+    batch_id character varying(500) COLLATE pg_catalog."default",
+    sys_load_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE landing.sdl_landing
+    OWNER to postgres;
+
+GRANT SELECT ON TABLE landing.sdl_landing TO mage;
+
+GRANT ALL ON TABLE landing.sdl_landing TO postgres;
+
+-- Index: ix_sdl_landing_index
+
+-- DROP INDEX landing.ix_sdl_landing_index;
+
+CREATE INDEX ix_sdl_landing_index
+    ON landing.sdl_landing USING btree
+    (index COLLATE pg_catalog."default")
+    TABLESPACE pg_default;
