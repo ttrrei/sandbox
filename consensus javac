@@ -1,0 +1,119 @@
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by Fernflower decompiler)
+//
+
+package com.aquant.etl;
+
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Iterator;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+public class CleanLoad extends Thread {
+    private String code;
+    private String ftbl_name;
+    private String ttbl_name;
+    private Statement statement;
+
+    public CleanLoad(String code, Statement statement, String ftbl_name, String ttbl_name) {
+        this.code = code;
+        this.ftbl_name = ftbl_name;
+        this.ttbl_name = ttbl_name;
+        this.statement = statement;
+    }
+
+    public void run() {
+        int loop = true;
+        int count = 0;
+        String link = "https://quotes.wsj.com/AU/XASX/" + this.code + "/research-ratings";
+        String sql_consensus = "insert into " + this.ftbl_name + " select '" + this.code + "','";
+        ArrayList<String> full = new ArrayList();
+        ArrayList<String> values = new ArrayList();
+        ArrayList consensus = new ArrayList();
+
+        try {
+            while(count < 40) {
+                ++count;
+                Elements valid_element = Jsoup.connect(link).get().getElementsByClass("cr_dataTable");
+                int consensus_index = this.getConsensusIndex(valid_element);
+                int value_index = this.getValueIndex(valid_element);
+                Elements sub;
+                if (consensus_index != -1) {
+                    sub = ((Element)valid_element.get(consensus_index)).getElementsByClass("data_data");
+                    consensus.add(((Element)sub.get(2)).wholeText());
+                    consensus.add(((Element)sub.get(5)).wholeText());
+                    consensus.add(((Element)sub.get(8)).wholeText());
+                    consensus.add(((Element)sub.get(11)).wholeText());
+                    consensus.add(((Element)sub.get(14)).wholeText());
+                }
+
+                if (value_index != -1) {
+                    sub = ((Element)valid_element.get(value_index)).getElementsByClass("data_data");
+                    values.add(((Element)sub.get(0)).wholeText());
+                    values.add(((Element)sub.get(1)).wholeText());
+                    values.add(((Element)sub.get(2)).wholeText());
+                    values.add(((Element)sub.get(3)).wholeText());
+                    values.add(((Element)sub.get(4)).wholeText());
+                }
+
+                if (consensus.size() > 0 && values.size() > 0) {
+                    count = 100;
+                }
+            }
+
+            if (consensus.size() == 0) {
+                full.add("");
+                full.add("");
+                full.add("");
+                full.add("");
+                full.add("");
+            } else {
+                full.addAll(consensus);
+            }
+
+            if (values.size() == 0) {
+                full.add("");
+                full.add("");
+                full.add("");
+                full.add("");
+                full.add("");
+            } else {
+                full.addAll(values);
+            }
+
+            String i;
+            for(Iterator var13 = full.iterator(); var13.hasNext(); sql_consensus = sql_consensus + i + "','") {
+                i = (String)var13.next();
+            }
+
+            this.statement.execute(sql_consensus.substring(0, sql_consensus.length() - 2) + ";delete from " + this.ttbl_name + " where code = '" + this.code + "';");
+            this.statement.close();
+        } catch (Exception var12) {
+            var12.printStackTrace();
+        }
+
+    }
+
+    private int getConsensusIndex(Elements valid_element) {
+        for(int i = 0; i < valid_element.size(); ++i) {
+            if (((Element)valid_element.get(i)).getElementsByTag("thead").size() > 0 && ((Element)valid_element.get(i)).getElementsByTag("th").size() > 2 && ((Element)((Element)valid_element.get(i)).getElementsByTag("th").get(1)).wholeText().equals("3 Months Ago") && ((Element)((Element)valid_element.get(i)).getElementsByTag("th").get(2)).wholeText().equals("1 Month Ago") && ((Element)valid_element.get(i)).getElementsByClass("data_data").size() == 15) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private int getValueIndex(Elements valid_element) {
+        for(int i = 0; i < valid_element.size(); ++i) {
+            if (((Element)valid_element.get(i)).getElementsByTag("thead").size() == 0 && ((Element)valid_element.get(i)).getElementsByClass("data_lbl").size() == 5 && ((Element)valid_element.get(i)).getElementsByClass("data_data").size() == 5) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+}
