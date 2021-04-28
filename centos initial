@@ -1,0 +1,77 @@
+
+## get into super user
+su
+## update base package list
+updatedb
+dnf -y update 
+dnf -y install epel-release
+## install all java related
+dnf -y install java-1.8.0-openjdk-devel
+dnf -y install java-11-openjdk-devel
+echo 2 | alternatives --config java
+echo 2 | alternatives --config javac
+
+## install httpd for postgresql
+dnf -y install httpd
+systemctl start httpd
+systemctl enable httpd
+
+## install postgres
+dnf -y install postgresql-server
+postgresql-setup --initdb
+systemctl enable postgresql.service
+systemctl start postgresql.service
+sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /var/lib/pgsql/data/postgresql.conf
+sed -i "s/host    all             all             127.0.0.1\/32            ident/host    all             all             127.0.0.1\/32            md5/g" /var/lib/pgsql/data/pg_hba.conf
+
+sudo -i -u postgres
+psql
+ALTER USER postgres WITH PASSWORD 'nemo123';
+\q
+exit
+
+dnf install -y https://ftp.postgresql.org/pub/pgadmin/pgadmin4/yum/pgadmin4-redhat-repo-1-1.noarch.rpm
+dnf install -y pgadmin4-desktop
+
+dnf -y install snapd
+systemctl enable --now snapd.socket
+ln -s /var/lib/snapd/snap /snap
+
+reboot -h now
+
+su
+snap install code --classic
+snap install sublime-text --classic
+snap install pycharm-community --classic
+snap install intellij-idea-community --classic
+## if see error msg : error: too early for operation, device not yet seeded or device model not acknowledged
+## restart or reinstall snap.
+
+dnf -y install git 
+
+exit
+
+
+git clone 'https://asxquant:Data1234!!!@github.com/asxquant/FullData.git'
+
+cd FullData/20171113_20200629
+unzip "*.zip"
+
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -f daily_short_20171113_20200612_ddl.txt
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -f full_matrix_ddl.txt
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -f history_20140303_20210305_ddl.txt
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -f tick_merge_20180601_20200513_ddl.txt
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -f web_consensus_20181119_20200629_ddl.txt
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -f web_finance_20171113_20200629_ddl.txt
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -f web_sentiment_20180601_20200629_ddl.txt
+
+
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy daily_short_20171113_20200629 from '/home/dev/FullData/20171113_20200629/daily_short_20171113_20200612_data.csv' DELIMITER ',' csv header"
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy full_matrix from '/home/dev/FullData/20171113_20200629/full_matrix_data.csv' DELIMITER ',' csv header"
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy full_hist from '/home/dev/FullData/20171113_20200629/history_20140303_20210305_data.csv' DELIMITER ',' csv header"
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy tick_merge_20180601_20200513 from '/home/dev/FullData/20171113_20200629/tick_merge_20180601_20200513.csv' DELIMITER ',' csv header"
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy web_consensus_2017181119_20200629 from '/home/dev/FullData/20171113_20200629/web_consensus_20181119_20200629_data.csv' DELIMITER ',' csv header"
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy web_finance_20171113_20200629 from '/home/dev/FullData/20171113_20200629/web_finance_20171113_20200629_data.csv' DELIMITER ',' csv header"
+psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy web_sentiment_20180601_20200629 from '/home/dev/FullData/20171113_20200629/web_sentiment_20180601_20200629_data.csv' DELIMITER ',' csv header"
+
+cd ~
