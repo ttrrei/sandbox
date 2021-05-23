@@ -49,6 +49,7 @@ snap install intellij-idea-community --classic
 
 dnf -y install git 
 
+
 rpm --import https://debian.neo4j.com/neotechnology.gpg.key
 cat <<EOF >  /etc/yum.repos.d/neo4j.repo
 [neo4j]
@@ -62,6 +63,8 @@ EOF
 dnf -y install neo4j-4.2.6
 
 systemctl enable neo4j
+
+
 
 exit
 
@@ -88,4 +91,8 @@ psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy web_consensus_
 psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy web_finance_20171113_20200629 from '/home/dev/FullData/20171113_20200629/web_finance_20171113_20200629_data.csv' DELIMITER ',' csv header"
 psql "postgresql://postgres:nemo123@127.0.0.1/postgres" -c "\copy web_sentiment_20180601_20200629 from '/home/dev/FullData/20171113_20200629/web_sentiment_20180601_20200629_data.csv' DELIMITER ',' csv header"
 
-cd ~
+mkdir Repo
+cd Repo
+git clone 'https://asxquant:Data1234!!!@github.com/asxquant/eStatement.git'
+git clone 'https://asxquant:Data1234!!!@github.com/asxquant/eList.git'
+git clone 'https://asxquant:Data1234!!!@github.com/asxquant/eShort.git'
